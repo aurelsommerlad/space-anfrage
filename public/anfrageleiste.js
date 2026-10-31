@@ -1,5 +1,5 @@
 /*!
- * SPACE im HØV – Anfrageleiste: Kalender (Version 5)
+ * SPACE im HØV – Anfrageleiste: Kalender (Version 6)
  * Wird vom Elementor-Widget per <script src> geladen. Die Leiste selbst ist
  * HTML/CSS im Widget und bleibt ohne dieses Skript sichtbar.
  * Übergeben werden nur beginn, ende und personen – keine personenbezogenen Daten.
@@ -13,7 +13,7 @@
   var DEFAULT_TARGET = "/space-anfrage/";
   var DEFAULT_HEADER_OFFSET = 100;
 
-  var VERSION = "5";
+  var VERSION = "6";
   var MAX_MONTHS_AHEAD = 24;
   var TWO_MONTHS_MIN_WIDTH = 760;
   var SELECTOR = "form[data-sa-leiste]";
@@ -124,6 +124,18 @@
   function isTwo() { return window.innerWidth >= TWO_MONTHS_MIN_WIDTH; }
   function el(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
   function closestDay(t) { return t && t.closest ? t.closest(".day") : null; }
+  function scrollParent(node) {
+    for (var e = node.parentElement; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+      var oy = getComputedStyle(e).overflowY;
+      if ((oy === "auto" || oy === "scroll") && e.scrollHeight > e.clientHeight) return e;
+    }
+    return null;
+  }
+  function scrollByY(node, dy) {
+    var sp = scrollParent(node);
+    if (sp) sp.scrollTop += dy;
+    else window.scrollBy(0, dy);
+  }
 
   var instances = [];
   var openInstance = null;
@@ -301,7 +313,7 @@
         var need = h - (vh - r.bottom - 16);
         var room = r.top - HEADER_OFFSET;
         if (room > 0) {
-          window.scrollBy(0, Math.min(need, room));
+          scrollByY(dateBtn, Math.min(need, room));
           r = dateBtn.getBoundingClientRect();
         }
       }
@@ -419,8 +431,14 @@
       e.preventDefault();
       moveFocus(t);
     });
+    var escHandled = false;
+    function swallowEscUp(e) {
+      if ((e.key === "Escape" || e.key === "Esc") && escHandled) { escHandled = false; e.stopPropagation(); e.preventDefault(); }
+    }
+    pop.addEventListener("keyup", swallowEscUp);
+    dateBtn.addEventListener("keyup", swallowEscUp);
     pop.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(true); return; }
+      if (e.key === "Escape" || e.key === "Esc") { e.preventDefault(); e.stopPropagation(); escHandled = true; close(true); return; }
       if (e.key !== "Tab") return;
       var items = Array.prototype.filter.call(pop.querySelectorAll("button"), function (b) {
         return !b.disabled && b.tabIndex >= 0 && getComputedStyle(b).visibility !== "hidden";
@@ -431,7 +449,7 @@
       else if (e.shiftKey && active === items[0]) { e.preventDefault(); close(true); }
     });
     dateBtn.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && openInstance === api) { e.preventDefault(); close(false); }
+      if ((e.key === "Escape" || e.key === "Esc") && openInstance === api) { e.preventDefault(); e.stopPropagation(); escHandled = true; close(false); }
     });
 
     function setError(field, out, msg) { field.setAttribute("aria-invalid", "true"); out.textContent = msg; }
@@ -513,22 +531,42 @@
   window.addEventListener("resize", function () { if (openInstance) openInstance.reposition(); });
 
   /* ---- Initialisierung, auch für später eingefügte Inhalte ---- */
+  // Markierung am Element selbst (eine Kopie des HTML wird so neu eingerichtet).
+  var KEY = "__spaceAnfrageKalender";
+
   function scan() {
-    for (var i = instances.length - 1; i >= 0; i--) {
-      if (!instances[i].form.isConnected) { instances[i].destroy(); instances.splice(i, 1); }
+    // Leisten, die länger als 3 s nicht mehr im Dokument sind, aufräumen.
+    // Kurzes Verschieben (z. B. Elementor-Popup öffnet) zählt nicht als Entfernen.
+    for (var i = 0; i < instances.length; i++) {
+      var inst = instances[i];
+      if (!inst.form.isConnected && !inst.pendingRemoval) {
+        inst.pendingRemoval = true;
+        setTimeout((function (it) {
+          return function () {
+            it.pendingRemoval = false;
+            if (it.form.isConnected) return;
+            it.destroy();
+            it.form[KEY] = null;
+            var k = instances.indexOf(it);
+            if (k >= 0) instances.splice(k, 1);
+          };
+        })(inst), 3000);
+      }
     }
     if (!document.body) return;
     var forms = document.querySelectorAll(SELECTOR);
     for (var j = 0; j < forms.length; j++) {
       var f = forms[j];
-      if (f.getAttribute("data-sa-ready")) continue;
+      if (f[KEY]) continue;
       try {
-        var inst = createInstance(f);
+        var created = createInstance(f);
+        f[KEY] = created;
         f.setAttribute("data-sa-ready", VERSION);
         f.setAttribute("data-sa-modality", modality);
-        instances.push(inst);
+        instances.push(created);
       } catch (err) {
         // Leiste bleibt sichtbar; ohne Kalender sendet der Pfeil das Formular normal ab.
+        f[KEY] = { failed: true };
         f.setAttribute("data-sa-ready", "fehler");
         if (window.console) console.error("[SPACE-Anfrageleiste]", err);
       }

@@ -1,73 +1,277 @@
 <!--
-  SPACE im HØV – kompakte Anfrageleiste (Widget A), Version 3
-  Einfügen in ein Elementor-Widget "HTML". Darf mehrfach auf einer Seite
-  stehen (z. B. getrennte Desktop-/Mobil-Abschnitte). Die Leiste rendert in
-  einem eigenen Shadow DOM: Stile der Website und von Elementor wirken nicht
-  hinein, nur die Schrift wird übernommen.
-  Zieladresse: TARGET_URL im Skript (eine Stelle). Übergeben werden nur
-  beginn, ende und personen – keine personenbezogenen Daten.
+  SPACE im HØV – kompakte Anfrageleiste (Widget A), Version 4
+  Einfügen in ein Elementor-Widget "HTML". Darf mehrfach auf einer Seite stehen.
+  Die Leiste ist reines HTML/CSS und immer sichtbar – auch wenn JavaScript
+  blockiert oder verzögert wird. Das Skript ergänzt nur den Kalender.
+  Zieladresse: TARGET_URL im Skript und action="…" im <form> (beide gleich halten).
+  Übergeben werden nur beginn, ende und personen – keine personenbezogenen Daten.
 -->
-<div class="space-anfrage-leiste" data-space-anfrage-leiste>
-  <noscript><a href="/space-anfrage/">Verfügbarkeit prüfen</a></noscript>
-</div>
+<form class="sa-leiste" data-sa-leiste action="/space-anfrage/" method="get" novalidate>
+  <div class="sa-leiste__row">
+    <button type="button" class="sa-leiste__date" aria-haspopup="dialog" aria-expanded="false" aria-label="Datum oder Zeitraum">
+      <span class="sa-leiste__placeholder" aria-hidden="true">Datum / Zeitraum</span>
+      <span class="sa-leiste__value" aria-hidden="true"></span>
+      <svg class="sa-leiste__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><rect x="2.5" y="4" width="15" height="13.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 8h15M6.5 2.2v3.4M13.5 2.2v3.4" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+    </button>
+    <label class="sa-leiste__guests">
+      <span class="sa-leiste__sr">Personen</span>
+      <input class="sa-leiste__input" name="personen" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="Personen">
+    </label>
+    <button type="submit" class="sa-leiste__submit" aria-label="Verfügbarkeit prüfen">
+      <svg class="sa-leiste__arrow" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M4 11h13.5M12 5.5l5.5 5.5-5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+    </button>
+  </div>
+  <p class="sa-leiste__error" data-sa-error="date" aria-live="polite"></p>
+  <p class="sa-leiste__error" data-sa-error="guests" aria-live="polite"></p>
+</form>
+
+<style>
+  /* Nur die Anfrageleiste. Dreifache Klasse + !important: setzt sich gegen
+     Theme- und Elementor-Formularstile durch, ohne andere Elemente zu berühren. */
+  .sa-leiste.sa-leiste.sa-leiste,
+  .sa-leiste.sa-leiste.sa-leiste * {
+    box-sizing: border-box !important;
+    transition: none !important;
+    animation: none !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+    text-shadow: none !important;
+    float: none !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste div,
+  .sa-leiste.sa-leiste.sa-leiste p,
+  .sa-leiste.sa-leiste.sa-leiste label,
+  .sa-leiste.sa-leiste.sa-leiste span {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: #1e1e1e !important;
+    font-family: inherit !important;
+    font-size: 16px !important;
+    line-height: 1.4 !important;
+    text-align: left !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) clamp(120px, 24%, 200px) 60px !important;
+    gap: 10px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date,
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__input {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 60px !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 18px !important;
+    background: #ffffff !important;
+    border: 1px solid #dcdcdc !important;
+    border-radius: 2px !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: #1e1e1e !important;
+    font-family: inherit !important;
+    font-size: 16px !important;
+    font-style: normal !important;
+    font-weight: 400 !important;
+    line-height: normal !important;
+    text-decoration: none !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date {
+    gap: 12px !important;
+    justify-content: space-between !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date * {
+    pointer-events: none !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__input {
+    display: block !important;
+    cursor: text !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date:hover,
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__input:hover {
+    background: #ffffff !important;
+    border-color: #a8a8a8 !important;
+    color: #1e1e1e !important;
+  }
+  /* Mausklick: nur ein dünner, dezenter Rahmen */
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date:focus,
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__input:focus {
+    background: #ffffff !important;
+    border: 1px solid #8c8c8c !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: #1e1e1e !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date[aria-expanded="true"] {
+    border-color: #1e1e1e !important;
+  }
+  /* Tastatur: klar sichtbarer Fokus */
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date:focus-visible,
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__submit:focus-visible,
+  .sa-leiste.sa-leiste.sa-leiste[data-sa-modality="keyboard"] .sa-leiste__input:focus {
+    outline: 2px solid #1e1e1e !important;
+    outline-offset: 2px !important;
+    border-color: #1e1e1e !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date[aria-invalid="true"],
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__input[aria-invalid="true"] {
+    border-color: #b42318 !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__placeholder,
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__value {
+    display: block !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font: inherit !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__placeholder,
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__input::placeholder {
+    color: #6b6b6b !important;
+    opacity: 1 !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__value:empty,
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date[data-filled] .sa-leiste__placeholder {
+    display: none !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__icon,
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__arrow {
+    display: block !important;
+    flex: none !important;
+    max-width: none !important;
+    fill: none !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__icon {
+    width: 20px !important;
+    height: 20px !important;
+    margin-left: auto !important;
+    color: #1e1e1e !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__arrow {
+    width: 22px !important;
+    height: 22px !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__guests {
+    position: relative !important;
+    display: block !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: inherit !important;
+    font: inherit !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__sr {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__submit {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 60px !important;
+    min-width: 0 !important;
+    height: 60px !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #1e1e1e !important;
+    border: 1px solid #1e1e1e !important;
+    border-radius: 2px !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: #ffffff !important;
+    cursor: pointer !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__submit:focus {
+    background: #1e1e1e !important;
+    border-color: #1e1e1e !important;
+    color: #ffffff !important;
+  }
+  @media (hover: hover) {
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__submit:hover {
+      background: #3a3a3a !important;
+      border-color: #3a3a3a !important;
+      color: #ffffff !important;
+    }
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__error {
+    margin: 8px 0 0 !important;
+    padding: 0 !important;
+    font-family: inherit !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    color: #b42318 !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__error:empty {
+    display: none !important;
+  }
+  @media (max-width: 599px) {
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__row {
+      grid-template-columns: minmax(0, 1fr) 60px !important;
+    }
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date {
+      grid-column: 1 / -1 !important;
+    }
+  }
+</style>
+
 <script data-cfasync="false" data-no-optimize="1" data-no-defer="1" data-noptimize="1" nowprocket>
 (function () {
   "use strict";
 
-  /* ---- Einstellung: Adresse der WordPress-Formularseite --------------- */
-  var TARGET_URL = "/space-anfrage/";
-  /* Höhe eines fixierten Website-Headers in px (Abstand beim Scrollen) */
-  var HEADER_OFFSET = 100;
+  /* ---- Einstellungen ------------------------------------------------- */
+  var TARGET_URL = "/space-anfrage/"; // Adresse der WordPress-Formularseite
+  var HEADER_OFFSET = 100; // Höhe eines fixierten Website-Headers in px
   /* -------------------------------------------------------------------- */
 
-  var VERSION = "3";
-  var MAX_MONTHS_AHEAD = 24; // wie im Anfrageformular
-  var TWO_MONTHS_MIN_WIDTH = 760; // ab dieser Fensterbreite zwei Monate
-  var SELECTOR = "[data-space-anfrage-leiste]";
+  var VERSION = "4";
+  var MAX_MONTHS_AHEAD = 24;
+  var TWO_MONTHS_MIN_WIDTH = 760;
+  var SELECTOR = "form[data-sa-leiste]";
 
-  // Mehrere Widgets auf der Seite: Skript nur einmal einrichten, danach nur neu scannen.
-  if (window.SpaceAnfrageLeiste && window.SpaceAnfrageLeiste.version === VERSION) {
-    window.SpaceAnfrageLeiste.scan();
-    return;
-  }
-  if (!("attachShadow" in Element.prototype)) return;
+  // Mehrere Widgets auf der Seite: nur einmal einrichten, danach nur neu scannen.
+  var existing = window.SpaceAnfrageLeiste4;
+  if (existing && typeof existing.scan === "function") { existing.scan(); return; }
 
-  var CSS = [
+  var MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+  var WD_SHORT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+  var WD_LONG = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+
+  /* ---- Kalender-Darstellung (in eigener, abgeschotteter Ebene) ---- */
+  var POP_CSS = [
     "*,*::before,*::after{box-sizing:border-box}",
     "[hidden]{display:none!important}",
     "p{margin:0;padding:0}",
-    "button,input{font:inherit;color:inherit;margin:0;-webkit-appearance:none;appearance:none}",
+    "button{font:inherit;color:inherit;margin:0;-webkit-appearance:none;appearance:none}",
     "svg{display:block;flex:none;fill:none}",
-    ".sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}",
-
-    /* Leiste */
-    ".bar{font-family:inherit;font-size:16px;line-height:1.4;color:#1e1e1e;text-align:left}",
-    ".form{display:grid;grid-template-columns:minmax(0,1fr) clamp(120px,24%,200px) 60px;gap:10px;margin:0;padding:0}",
-    ".date,.guests{position:relative;min-width:0}",
-    ".datebtn,.input{display:flex;align-items:center;width:100%;height:60px;padding:0 18px;background:#fff;border:1px solid #dcdcdc;border-radius:2px;box-shadow:none;outline:none;font-size:16px;font-weight:400;line-height:normal;color:#1e1e1e}",
-    ".datebtn{gap:12px;justify-content:space-between;text-align:left;white-space:nowrap;cursor:pointer}",
-    ".datebtn *{pointer-events:none}",
-    ".input{display:block;cursor:text}",
-    ".datebtn:hover,.input:hover{border-color:#a8a8a8}",
-    /* Mausklick: nur ein dünner, dezenter Rahmen */
-    ".datebtn:focus,.input:focus{outline:none;box-shadow:none;border-color:#8c8c8c}",
-    ".datebtn[aria-expanded=true]{border-color:#1e1e1e}",
-    /* Tastatur: klar sichtbarer Fokus */
-    ".datebtn:focus-visible,.submit:focus-visible,.bar[data-modality=keyboard] .input:focus{outline:2px solid #1e1e1e;outline-offset:2px;border-color:#1e1e1e}",
-    ".datebtn[aria-invalid=true],.input[aria-invalid=true]{border-color:#b42318}",
-    ".placeholder,.input::placeholder{color:#6b6b6b;opacity:1}",
-    ".placeholder,.value{min-width:0;overflow:hidden;text-overflow:ellipsis}",
-    ".value:empty{display:none}",
-    ".datebtn[data-filled] .placeholder{display:none}",
-    ".icon{width:20px;height:20px;margin-left:auto;color:#1e1e1e}",
-    ".submit{display:flex;align-items:center;justify-content:center;width:60px;height:60px;padding:0;background:#1e1e1e;border:1px solid #1e1e1e;border-radius:2px;color:#fff;cursor:pointer;outline:none}",
-    ".submit svg{width:22px;height:22px}",
-    "@media (hover:hover){.submit:hover{background:#3a3a3a;border-color:#3a3a3a}}",
-    ".error{margin-top:8px;font-size:14px;line-height:1.4;color:#b42318}",
-    ".error:empty{display:none}",
-    "@media (max-width:599px){.form{grid-template-columns:minmax(0,1fr) 60px}.date{grid-column:1/-1}}",
-
-    /* Kalender */
     ".pop{position:absolute;top:0;left:0;width:380px;margin:0;padding:18px 16px 14px;background:#fff;border:1px solid #e3e3e3;border-radius:6px;box-shadow:0 10px 30px rgba(0,0,0,.1),0 2px 6px rgba(0,0,0,.05);font-family:inherit;font-size:16px;line-height:1.4;color:#1e1e1e;text-align:left;outline:none;overscroll-behavior:contain}",
     ".pop.two{padding:22px 28px 18px}",
     ".nav{position:absolute;top:14px;display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;background:transparent;border:0;border-radius:50%;color:#1e1e1e;cursor:pointer;outline:none}",
@@ -110,26 +314,6 @@
     "@media (max-width:599px){.apply{width:100%}}"
   ].join("\n");
 
-  var BAR_HTML =
-    '<div class="bar" data-modality="pointer">' +
-    '<form class="form" novalidate>' +
-    '<div class="date">' +
-    '<span id="date-label" class="sr">Datum oder Zeitraum</span>' +
-    '<button type="button" class="datebtn" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="date-label date-value" aria-describedby="date-error">' +
-    '<span class="placeholder" aria-hidden="true">Datum / Zeitraum</span>' +
-    '<span id="date-value" class="value"></span>' +
-    '<svg class="icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><rect x="2.5" y="4" width="15" height="13.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 8h15M6.5 2.2v3.4M13.5 2.2v3.4" stroke="currentColor" stroke-width="1.3"/></svg>' +
-    "</button></div>" +
-    '<div class="guests">' +
-    '<label for="guests" class="sr">Personen</label>' +
-    '<input id="guests" class="input" name="personen" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="Personen" aria-describedby="guests-error">' +
-    "</div>" +
-    '<button type="submit" class="submit" aria-label="Verfügbarkeit prüfen"><svg viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M4 11h13.5M12 5.5l5.5 5.5-5.5 5.5" stroke="currentColor" stroke-width="1.6"/></svg></button>' +
-    "</form>" +
-    '<p id="date-error" class="error" aria-live="polite"></p>' +
-    '<p id="guests-error" class="error" aria-live="polite"></p>' +
-    "</div>";
-
   var POP_HTML =
     '<div class="pop" role="dialog" aria-label="Datum oder Zeitraum wählen" tabindex="-1" hidden>' +
     '<button type="button" class="nav prev" aria-label="Vorheriger Monat"><svg viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M11 3.5 5.5 9l5.5 5.5" stroke="currentColor" stroke-width="1.5"/></svg></button>' +
@@ -139,15 +323,9 @@
     '<button type="button" class="apply" disabled>Übernehmen</button></div>' +
     "</div>";
 
-  // Host-Elemente gegen Seitenstile absichern (Inline-!important hat Vorrang).
-  var HOST_STYLE = "all:initial!important;display:block!important;width:100%!important;font-family:inherit!important;";
   var POP_HOST_STYLE =
     "all:initial!important;display:block!important;position:fixed!important;top:0!important;left:0!important;" +
     "width:0!important;height:0!important;overflow:visible!important;z-index:2147483000!important;font-family:inherit!important;";
-
-  var MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
-  var WD_SHORT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-  var WD_LONG = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
 
   /* ---- Datumshilfen: reine Kalendertage "YYYY-MM-DD", Europe/Berlin ---- */
   function pad(n) { return (n < 10 ? "0" : "") + n; }
@@ -162,7 +340,12 @@
   function weekday(s) { var p = parts(s); return (new Date(Date.UTC(p[0], p[1], p[2])).getUTCDay() + 6) % 7; }
   function daysInMonth(m) { var p = m.split("-"); return new Date(Date.UTC(+p[0], +p[1], 0)).getUTCDate(); }
   function todayBerlin() {
-    return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    try {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    } catch (e) {
+      var d = new Date();
+      return iso(d.getFullYear(), d.getMonth(), d.getDate());
+    }
   }
   function fmt(s) { var p = parts(s); return pad(p[2]) + "." + pad(p[1] + 1) + "." + p[0]; }
   function fmtRange(a, b) {
@@ -184,28 +367,32 @@
   var instances = [];
   var openInstance = null;
   var modality = "pointer";
+  var uid = 0;
 
   /* ---- Eine Leiste ---- */
-  function createInstance(mount) {
-    mount.setAttribute("data-sa-ready", VERSION);
-    mount.setAttribute("style", HOST_STYLE);
-    var root = mount.attachShadow({ mode: "open" });
-    root.innerHTML = "<style>" + CSS + "</style>" + BAR_HTML;
+  function createInstance(form) {
+    var n = ++uid;
+    var dateBtn = form.querySelector(".sa-leiste__date");
+    var dateValue = form.querySelector(".sa-leiste__value");
+    var guestsEl = form.querySelector(".sa-leiste__input");
+    var dateErr = form.querySelector('[data-sa-error="date"]');
+    var guestsErr = form.querySelector('[data-sa-error="guests"]');
+    if (!dateBtn || !dateValue || !guestsEl || !dateErr || !guestsErr) throw new Error("Markup unvollständig");
 
+    // Eindeutige IDs je Leiste (keine Konflikte bei mehreren Widgets).
+    dateErr.id = "sa-leiste-" + n + "-date-error";
+    guestsErr.id = "sa-leiste-" + n + "-guests-error";
+    dateBtn.setAttribute("aria-describedby", dateErr.id);
+    guestsEl.setAttribute("aria-describedby", guestsErr.id);
+
+    // Kalender: eigene Ebene an <body> mit eigenem Shadow DOM.
     var popHost = document.createElement("div");
-    popHost.setAttribute("data-space-anfrage-kalender", "");
+    popHost.setAttribute("data-sa-leiste-kalender", String(n));
     popHost.setAttribute("style", POP_HOST_STYLE);
     var proot = popHost.attachShadow({ mode: "open" });
-    proot.innerHTML = "<style>" + CSS + "</style>" + POP_HTML;
+    proot.innerHTML = "<style>" + POP_CSS + "</style>" + POP_HTML;
     document.body.appendChild(popHost);
 
-    var bar = root.querySelector(".bar");
-    var form = root.querySelector(".form");
-    var dateBtn = root.querySelector(".datebtn");
-    var dateValue = root.querySelector(".value");
-    var dateErr = root.getElementById("date-error");
-    var guestsEl = root.querySelector(".input");
-    var guestsErr = root.getElementById("guests-error");
     var pop = proot.querySelector(".pop");
     var monthsEl = proot.querySelector(".months");
     var prevBtn = proot.querySelector(".prev");
@@ -279,15 +466,15 @@
     }
 
     function build() {
-      var n = count();
+      var c = count();
       if (view < minMonth) view = minMonth;
-      if (addMonths(view, n - 1) > maxMonth) view = addMonths(maxMonth, -(n - 1));
-      shownCount = n;
-      pop.classList.toggle("two", n === 2);
+      if (addMonths(view, c - 1) > maxMonth) view = addMonths(maxMonth, -(c - 1));
+      shownCount = c;
+      pop.classList.toggle("two", c === 2);
       monthsEl.textContent = "";
-      for (var i = 0; i < n; i++) monthsEl.appendChild(buildMonth(addMonths(view, i)));
+      for (var i = 0; i < c; i++) monthsEl.appendChild(buildMonth(addMonths(view, i)));
       prevBtn.disabled = view <= minMonth;
-      nextBtn.disabled = addMonths(view, n - 1) >= maxMonth;
+      nextBtn.disabled = addMonths(view, c - 1) >= maxMonth;
       if (!monthsEl.querySelector('[data-date="' + focusDate + '"]')) {
         var all = monthsEl.querySelectorAll(".day"), first = null;
         for (var j = 0; j < all.length; j++) {
@@ -331,13 +518,12 @@
       if (!s) statusEl.textContent = "";
       else if (!e) statusEl.textContent = "Beginn " + fmt(s) + " – wähle das Ende oder übernimm diesen Tag.";
       else {
-        var n = countDays(s, e);
-        statusEl.textContent = fmtRange(s, e) + " · " + n + (n === 1 ? " Tag" : " Tage");
+        var c = countDays(s, e);
+        statusEl.textContent = fmtRange(s, e) + " · " + c + (c === 1 ? " Tag" : " Tage");
       }
       applyBtn.disabled = !s;
     }
 
-    /* Positionierung im Fenster (fixe Ebene über der Seite). */
     function place(allowScroll) {
       var vw = document.documentElement.clientWidth || window.innerWidth;
       var vh = window.innerHeight;
@@ -348,8 +534,6 @@
       var h = pop.offsetHeight;
       var r = dateBtn.getBoundingClientRect();
       if (allowScroll && h > vh - r.bottom - 16 && h > r.top - 16 - HEADER_OFFSET) {
-        // Passt weder unter noch über das Feld: nur so weit scrollen wie nötig,
-        // das Feld bleibt unterhalb eines fixierten Headers sichtbar.
         var need = h - (vh - r.bottom - 16);
         var room = r.top - HEADER_OFFSET;
         if (room > 0) {
@@ -399,8 +583,10 @@
     function apply() {
       if (!temp.start) return;
       committed = { start: temp.start, end: temp.end || temp.start };
-      dateValue.textContent = fmtRange(committed.start, committed.end);
+      var text = fmtRange(committed.start, committed.end);
+      dateValue.textContent = text;
       dateBtn.setAttribute("data-filled", "");
+      dateBtn.setAttribute("aria-label", "Datum oder Zeitraum: " + text);
       clearError(dateBtn, dateErr);
       close(true);
     }
@@ -418,14 +604,13 @@
     function moveFocus(t) {
       if (monthOf(t) < minMonth || monthOf(t) > maxMonth) return;
       focusDate = t;
-      var n = count();
+      var c = count();
       if (monthOf(t) < view) { view = monthOf(t); build(); place(false); }
-      else if (monthOf(t) > addMonths(view, n - 1)) { view = addMonths(monthOf(t), -(n - 1)); build(); place(false); }
+      else if (monthOf(t) > addMonths(view, c - 1)) { view = addMonths(monthOf(t), -(c - 1)); build(); place(false); }
       else paint();
       focusDay(t);
     }
 
-    /* ---- Ereignisse dieser Leiste ---- */
     dateBtn.addEventListener("click", function () {
       if (openInstance === api) close(false);
       else open();
@@ -433,7 +618,6 @@
     prevBtn.addEventListener("click", function () { view = addMonths(view, -1); build(); place(false); });
     nextBtn.addEventListener("click", function () { view = addMonths(view, 1); build(); place(false); });
     applyBtn.addEventListener("click", apply);
-
     monthsEl.addEventListener("click", function (e) {
       var b = closestDay(e.target);
       if (!b || b.getAttribute("aria-disabled") === "true") return;
@@ -486,7 +670,6 @@
       if (e.key === "Escape" && openInstance === api) { e.preventDefault(); close(false); }
     });
 
-    /* ---- Prüfen und weiterleiten ---- */
     function setError(field, out, msg) { field.setAttribute("aria-invalid", "true"); out.textContent = msg; }
     function clearError(field, out) { field.removeAttribute("aria-invalid"); out.textContent = ""; }
 
@@ -529,8 +712,7 @@
     });
 
     var api = {
-      mount: mount,
-      bar: bar,
+      form: form,
       contains: function (path) { return path.indexOf(pop) >= 0 || path.indexOf(dateBtn) >= 0; },
       close: close,
       reposition: function () {
@@ -548,6 +730,11 @@
   }
 
   /* ---- Gemeinsame Ereignisse (einmal pro Seite) ---- */
+  function setModality(m) {
+    if (m === modality) return;
+    modality = m;
+    for (var i = 0; i < instances.length; i++) instances[i].form.setAttribute("data-sa-modality", m);
+  }
   document.addEventListener("pointerdown", function (e) {
     setModality("pointer");
     if (!openInstance) return;
@@ -555,29 +742,32 @@
     if (!openInstance.contains(path)) openInstance.close(false);
   }, true);
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Tab" || e.key.indexOf("Arrow") === 0) setModality("keyboard");
+    var k = e.key || "";
+    if (k === "Tab" || k.indexOf("Arrow") === 0) setModality("keyboard");
   }, true);
   window.addEventListener("scroll", function () { if (openInstance) openInstance.reposition(); }, true);
   window.addEventListener("resize", function () { if (openInstance) openInstance.reposition(); });
 
-  function setModality(m) {
-    if (m === modality) return;
-    modality = m;
-    for (var i = 0; i < instances.length; i++) instances[i].bar.setAttribute("data-modality", m);
-  }
-
   /* ---- Initialisierung, auch für später eingefügte Inhalte ---- */
   function scan() {
     for (var i = instances.length - 1; i >= 0; i--) {
-      if (!instances[i].mount.isConnected) { instances[i].destroy(); instances.splice(i, 1); }
+      if (!instances[i].form.isConnected) { instances[i].destroy(); instances.splice(i, 1); }
     }
     if (!document.body) return;
-    var mounts = document.querySelectorAll(SELECTOR);
-    for (var j = 0; j < mounts.length; j++) {
-      var m = mounts[j];
-      if (m.shadowRoot || m.getAttribute("data-sa-ready")) continue;
-      try { instances.push(createInstance(m)); }
-      catch (err) { if (window.console) console.error("[SPACE-Anfrageleiste]", err); }
+    var forms = document.querySelectorAll(SELECTOR);
+    for (var j = 0; j < forms.length; j++) {
+      var f = forms[j];
+      if (f.getAttribute("data-sa-ready")) continue;
+      try {
+        var inst = createInstance(f);
+        f.setAttribute("data-sa-ready", VERSION);
+        f.setAttribute("data-sa-modality", modality);
+        instances.push(inst);
+      } catch (err) {
+        // Leiste bleibt sichtbar; ohne Kalender sendet der Pfeil das Formular normal ab.
+        f.setAttribute("data-sa-ready", "fehler");
+        if (window.console) console.error("[SPACE-Anfrageleiste]", err);
+      }
     }
   }
 
@@ -588,21 +778,16 @@
     (window.requestAnimationFrame || setTimeout)(function () { pending = false; scan(); });
   }
 
-  window.SpaceAnfrageLeiste = {
-    version: VERSION,
-    scan: scan,
-    get instances() { return instances.length; }
-  };
+  window.SpaceAnfrageLeiste4 = { version: VERSION, scan: scan, count: function () { return instances.length; } };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", scan);
   scan();
-  new MutationObserver(function (records) {
-    for (var i = 0; i < records.length; i++) {
-      if (records[i].addedNodes.length || records[i].removedNodes.length) { scheduleScan(); return; }
-    }
-  }).observe(document.documentElement, { childList: true, subtree: true });
-  if (window.jQuery && window.elementorFrontend && window.elementorFrontend.hooks) {
-    window.elementorFrontend.hooks.addAction("frontend/element_ready/html.default", scheduleScan);
+  if (window.MutationObserver) {
+    new MutationObserver(function (records) {
+      for (var i = 0; i < records.length; i++) {
+        if (records[i].addedNodes.length || records[i].removedNodes.length) { scheduleScan(); return; }
+      }
+    }).observe(document.documentElement, { childList: true, subtree: true });
   }
 })();
 </script>

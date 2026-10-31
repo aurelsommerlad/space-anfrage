@@ -1,5 +1,5 @@
 import "server-only";
-import { eachDay, type IsoDate } from "@/lib/dates";
+import { addDays, eachDay, type IsoDate } from "@/lib/dates";
 import type { LiveConfig } from "./config";
 import { log } from "./log";
 
@@ -13,18 +13,28 @@ import { log } from "./log";
  *
  * Abgleich mit den echten Daten von ALTUS (lesend geprüft):
  *  - SPACE = Kategorie ALTUS-SPACE (MeetingRoom, 1 Einheit ALTUS-SIQ)
- *  - Buchungen sind Tagesnutzungen (Zeitscheibe "Day Use" 10–16 Uhr),
- *    je Veranstaltungstag eine Reservierung.
+ *  - Zeitscheiben: ALTUS-DAY (DayUse 10–16 Uhr), ALTUS-NIGHT (OverNight 16–10 Uhr)
+ *  - Reservierungen sind Tagesnutzungen (Rate ALTUS-STD-SPACE, DayUse).
+ *  - Wartungen/Sperren können beliebige Zeiten haben; apaleo zählt sie in jeder
+ *    Zeitscheibe, die sie überschneiden (z. B. Sperre bis 10 Uhr → Nachtscheibe
+ *    des Vortags).
  *
- * Ein Tag gilt nur dann als frei, wenn die SPACE GANZTÄGIG frei ist:
- *  - Tageszeitscheibe (DayUse) dieses Tages: verfügbar, und
- *  - Nachtzeitscheibe (OverNight), die an diesem Tag beginnt: verfügbar
- *    (deckt Abendveranstaltungen und Sperren ab 16 Uhr ab).
+ * Ein Kalendertag D gilt nur dann als frei, wenn die SPACE den GANZEN Tag
+ * (00:00–24:00 Uhr) frei ist. Das decken drei Zeitscheiben lückenlos ab:
+ *    OverNight(D-1)  [D-1 16:00, D 10:00)   → 00:00–10:00 Uhr
+ *    DayUse(D)       [D 10:00,   D 16:00)   → 10:00–16:00 Uhr
+ *    OverNight(D)    [D 16:00,   D+1 10:00) → 16:00–24:00 Uhr
+ * Damit sind alle wählbaren Zeiten (06:00–24:00) inklusive Auf- und Abbau am
+ * selben Tag geprüft. Die Lückenlosigkeit wird bei jeder Abfrage anhand der
+ * gelieferten Zeitstempel kontrolliert; ändert sich die Konfiguration in apaleo
+ * so, dass eine Lücke entsteht, ist das ein Fehler ("nicht prüfbar").
+ *
  * "Verfügbar" heißt: availableCount ≥ 1, keine Wartung (out of service/order/
  * inventory) und keine Block-Belegung (definite/tentative/optional).
  *
- * Jeder Fehler (Netzwerk, Zeitüberschreitung, HTTP-Fehler, unerwartete Antwort,
- * fehlende Tage) führt zu einer Ausnahme – nie zu "verfügbar".
+ * Fehler (Netzwerk, Zeitüberschreitung, HTTP-Fehler, unerwartete oder
+ * unvollständige Antwort, fehlende Tage, Lücken) führen zu
+ * ApaleoUnavailableError – nie zu "frei" und nie zu "belegt".
  */
 
 export class ApaleoUnavailableError extends Error {
@@ -74,27 +84,39 @@ async function getToken(cfg: Cfg): Promise<string> {
 }
 
 interface Counts {
-  availableCount?: number;
-  maintenance?: { outOfService?: number; outOfOrder?: number; outOfInventory?: number };
-  block?: { definite?: number; tentative?: number; optional?: number; remaining?: number };
+  availableCount?: unknown;
+  maintenance?: { outOfService?: unknown; outOfOrder?: unknown; outOfInventory?: unknown };
+  block?: { definite?: unknown; tentative?: unknown; optional?: unknown };
 }
 interface TimeSlice {
-  from: string;
-  to: string;
+  from?: unknown;
+  to?: unknown;
   unitGroups?: (Counts & { unitGroup?: { id?: string } })[];
 }
-
-function sliceIsFree(c: Counts | undefined): boolean {
-  if (!c || typeof c.availableCount !== "number") return false;
-  const m = c.maintenance ?? {};
-  const b = c.block ?? {};
-  const maintenance = (m.outOfService ?? 0) + (m.outOfOrder ?? 0) + (m.outOfInventory ?? 0);
-  const blocked = (b.definite ?? 0) + (b.tentative ?? 0) + (b.optional ?? 0);
-  return c.availableCount >= 1 && maintenance === 0 && blocked === 0;
+interface Slice {
+  from: number;
+  to: number;
+  free: boolean;
 }
 
-/** Fragt eine Zeitscheiben-Vorlage für from..to (inkl.) ab und liefert je Tag frei/belegt. */
-async function fetchTemplate(cfg: Cfg, template: "DayUse" | "OverNight", from: IsoDate, to: IsoDate): Promise<Map<IsoDate, boolean>> {
+const num = (v: unknown, fallback?: number): number => {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (v === undefined && fallback !== undefined) return fallback;
+  throw new ApaleoUnavailableError("Verfügbarkeit: unvollständige Angaben in der Antwort");
+};
+
+/** Frei/belegt einer Zeitscheibe. Fehlende Pflichtangaben sind ein Fehler, kein "belegt". */
+function sliceIsFree(c: Counts): boolean {
+  const available = num(c.availableCount);
+  const m = c.maintenance ?? {};
+  const b = c.block ?? {};
+  const maintenance = num(m.outOfService, 0) + num(m.outOfOrder, 0) + num(m.outOfInventory, 0);
+  const blocked = num(b.definite, 0) + num(b.tentative, 0) + num(b.optional, 0);
+  return available >= 1 && maintenance === 0 && blocked === 0;
+}
+
+/** Fragt eine Zeitscheiben-Vorlage für from..to (inkl.) ab; Schlüssel = lokales Datum des Scheibenbeginns. */
+async function fetchTemplate(cfg: Cfg, template: "DayUse" | "OverNight", from: IsoDate, to: IsoDate): Promise<Map<IsoDate, Slice>> {
   const url = new URL("/availability/v1/unit-groups", cfg.apiUrl);
   url.searchParams.set("propertyId", cfg.propertyId);
   url.searchParams.set("from", from);
@@ -123,28 +145,50 @@ async function fetchTemplate(cfg: Cfg, template: "DayUse" | "OverNight", from: I
   const body = (await res.json().catch(() => null)) as { timeSlices?: TimeSlice[] } | null;
   if (!body || !Array.isArray(body.timeSlices)) throw new ApaleoUnavailableError("Verfügbarkeit: unerwartete Antwort");
 
-  const result = new Map<IsoDate, boolean>();
+  const result = new Map<IsoDate, Slice>();
   for (const ts of body.timeSlices) {
+    const f = typeof ts.from === "string" ? Date.parse(ts.from) : NaN;
+    const t = typeof ts.to === "string" ? Date.parse(ts.to) : NaN;
+    if (!Number.isFinite(f) || !Number.isFinite(t) || t <= f) throw new ApaleoUnavailableError("Verfügbarkeit: ungültige Zeitscheibe");
     // Kalendertag = lokales Datum am Beginn der Zeitscheibe (ISO mit Offset der Property)
-    const day = typeof ts.from === "string" ? ts.from.slice(0, 10) : "";
+    const day = (ts.from as string).slice(0, 10);
     const ug = ts.unitGroups?.find((u) => u.unitGroup?.id === cfg.unitGroupId);
-    result.set(day, sliceIsFree(ug));
+    if (!ug) throw new ApaleoUnavailableError("Verfügbarkeit: Kategorie fehlt in der Antwort");
+    result.set(day, { from: f, to: t, free: sliceIsFree(ug) });
   }
   return result;
 }
 
-/** Belegte (nicht ganztägig freie) Tage im Zeitraum from..to (jeweils inklusive). */
+/** Lokale Mitternacht (Europe/Berlin) am Beginn von `day` als Zeitpunkt. */
+function berlinMidnight(day: IsoDate): number {
+  // Offset um 00:00 UTC bestimmen – liegt vor der Umstellung (2/3 Uhr), gilt also für Mitternacht.
+  const utcMidnight = Date.parse(`${day}T00:00:00Z`);
+  const hour = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Berlin", hour: "2-digit", hourCycle: "h23" }).format(new Date(utcMidnight));
+  return utcMidnight - Number(hour) * 3_600_000; // Berlin ist UTC+1 bzw. UTC+2
+}
+
+/**
+ * Belegte (nicht ganztägig freie) Tage im Zeitraum from..to (jeweils inklusive).
+ * Wirft ApaleoUnavailableError, wenn die Verfügbarkeit nicht vollständig prüfbar ist.
+ */
 export async function getApaleoBlockedDates(cfg: Cfg, from: IsoDate, to: IsoDate): Promise<IsoDate[]> {
-  const [day, night] = await Promise.all([fetchTemplate(cfg, "DayUse", from, to), fetchTemplate(cfg, "OverNight", from, to)]);
+  const [day, night] = await Promise.all([
+    fetchTemplate(cfg, "DayUse", from, to),
+    fetchTemplate(cfg, "OverNight", addDays(from, -1), to),
+  ]);
   const blocked: IsoDate[] = [];
   for (const d of eachDay(from, to)) {
-    const dayFree = day.get(d);
-    const nightFree = night.get(d);
-    // Fehlende Tage in der Antwort sind ein Fehler – nie "frei".
-    if (dayFree === undefined || nightFree === undefined) {
-      throw new ApaleoUnavailableError(`Verfügbarkeit: Tag fehlt in der Antwort`);
-    }
-    if (!dayFree || !nightFree) blocked.push(d);
+    const before = night.get(addDays(d, -1));
+    const dayUse = day.get(d);
+    const evening = night.get(d);
+    // Fehlende Tage in der Antwort sind ein Fehler – weder "frei" noch "belegt".
+    if (!before || !dayUse || !evening) throw new ApaleoUnavailableError("Verfügbarkeit: Tag fehlt in der Antwort");
+    // Lückenlose Abdeckung 00:00–24:00 Uhr kontrollieren
+    const start = berlinMidnight(d);
+    const end = berlinMidnight(addDays(d, 1));
+    const covered = before.from <= start && before.to >= dayUse.from && dayUse.to >= evening.from && evening.to >= end;
+    if (!covered) throw new ApaleoUnavailableError("Verfügbarkeit: Zeitscheiben decken den Tag nicht lückenlos ab");
+    if (!before.free || !dayUse.free || !evening.free) blocked.push(d);
   }
   return blocked;
 }

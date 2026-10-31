@@ -4,6 +4,7 @@ import { MAX_MONTHS_AHEAD, MIN_LEAD_DAYS } from "@/lib/booking";
 import { applyBooked, checkPrefill, readPrefillParams, type PrefillResult } from "@/lib/prefill";
 import { getBookedDates } from "./booking-backend";
 import { getModeState, getPrivacyUrl } from "./config";
+import { log } from "./log";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -17,6 +18,7 @@ export async function getInitialBookingData(searchParams: SearchParams = {}) {
   const earliest = addDays(today, MIN_LEAD_DAYS);
   const latest = lastOfMonth(addMonths(monthOf(today), MAX_MONTHS_AHEAD));
   const state = getModeState();
+  if (state.mode === "misconfigured") log.error("config.misconfigured", { problems: state.problems });
 
   let prefill: PrefillResult | null = null;
   const params = readPrefillParams(searchParams);
@@ -27,7 +29,7 @@ export async function getInitialBookingData(searchParams: SearchParams = {}) {
       try {
         booked = await getBookedDates(prefill.startDate, prefill.endDate, { state });
       } catch (err) {
-        console.error("[prefill]", err);
+        log.error("prefill.availability_failed", { reason: (err as Error).message });
       }
       prefill = applyBooked(prefill, booked);
     }
@@ -41,7 +43,7 @@ export async function getInitialBookingData(searchParams: SearchParams = {}) {
     bookedDates = await getBookedDates(firstOfMonth(month), lastOfMonth(addMonths(month, 1)), { state });
     loadedMonths = [month, addMonths(month, 1)];
   } catch (err) {
-    console.error("[initial-data]", err);
+    log.error("initial.availability_failed", { reason: (err as Error).message });
   }
   return {
     today,

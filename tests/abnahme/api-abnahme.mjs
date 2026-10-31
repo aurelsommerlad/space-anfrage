@@ -31,7 +31,7 @@ const CM = "2028-0" + (1 + Math.floor(Math.random()*9));
 // 1 Kalender: belegte Tage, Wartung, Nacht-Sperre, Block
 await mock({ ...reset, booked: [CM + "-03"], maint: [CM + "-10"], nightBlocked: [CM + "-15"], blockDays: [CM + "-20"] });
 let r = await fetch(`${APP}/api/availability?from=${CM}&to=${CM}`); let j = await r.json();
-check("Kalender: belegt/Wartung/Abendsperre/Block erkannt", r.status === 200 && JSON.stringify(j.bookedDates) === JSON.stringify([CM + "-03",CM + "-10",CM + "-15",CM + "-20"]) && j.source === "apaleo", JSON.stringify(j));
+check("Kalender: belegt/Wartung/Abendsperre/Block erkannt (Nachtsperre wirkt bis 10 Uhr Folgetag)", r.status === 200 && JSON.stringify(j.bookedDates) === JSON.stringify([CM + "-03",CM + "-10",CM + "-11",CM + "-15",CM + "-16",CM + "-20",CM + "-21"]) && j.source === "apaleo", JSON.stringify(j));
 let st = await mockState();
 check("Kalender: DayUse + OverNight, Zeitraum inkl. letztem Tag", st.calls.some(c => c.timeSliceTemplate === "DayUse" && c.to === CM + "-" + new Date(Date.UTC(+CM.slice(0,4), +CM.slice(5), 0)).getUTCDate()) && st.calls.some(c => c.timeSliceTemplate === "OverNight"), JSON.stringify(st.calls));
 
@@ -43,7 +43,7 @@ const ref1 = r.json?.reference;
 const row = (await sql`select * from anfragen where reference = ${ref1}`)[0];
 check("DB: Status neu, Umgebung preview", row?.status === "neu" && row?.environment === "preview", JSON.stringify(row?.status));
 st = await mockState();
-check("Frische apaleo-Prüfung beim Absenden (beide Vorlagen, genau der Tag)", st.calls.filter(c => c.from === "2027-02-10" && c.to === "2027-02-10").length === 2, JSON.stringify(st.calls));
+check("Frische apaleo-Prüfung beim Absenden: DayUse am Tag, OverNight ab Vortag", st.calls.some(c => c.timeSliceTemplate === "DayUse" && c.from === "2027-02-10" && c.to === "2027-02-10") && st.calls.some(c => c.timeSliceTemplate === "OverNight" && c.from === "2027-02-09" && c.to === "2027-02-10"), JSON.stringify(st.calls));
 const intern = st.mails.find(m => m.to.includes("stay@unique-places.com")); const guest = st.mails.find(m => m.to.includes(b.email));
 check("Mail intern an stay@ mit Reply-To Interessent", intern && intern.reply_to === b.email && intern.subject.includes(ref1), JSON.stringify(intern));
 check("Bestätigung an Interessent: Zusammenfassung + unverbindlich", guest && guest.text.includes("unverbindlich und noch keine Reservierung") && guest.text.includes("Anfragenummer: " + ref1) && guest.text.includes("Personen: 12") && guest.reply_to === "stay@unique-places.com", guest?.text);
@@ -75,6 +75,25 @@ for (const [k, label] of [["maint", "Wartung"], ["nightBlocked", "Abendsperre (O
   await mock({ ...reset, [k]: ["2027-02-20"] }); b = body({ startDate: "2027-02-20", endDate: "2027-02-20" }); r = await submit(b);
   check(`Sperre ${label}: 409, nicht gespeichert`, r.status === 409 && (await count(b.email)) === 0, JSON.stringify(r));
 }
+// 6b Lückenlose Tagesabdeckung
+await mock({ ...reset, nightBlocked: ["2027-02-27"] }); b = body({ startDate: "2027-02-28", endDate: "2027-02-28", startTime: "08:00", endTime: "12:00" }); r = await submit(b);
+check("Sperre bis 10 Uhr (Nachtscheibe Vortag) blockiert Morgen des Folgetags: 409", r.status === 409 && r.json.conflictDates?.[0] === "2027-02-28" && (await count(b.email)) === 0, JSON.stringify(r));
+await mock({ ...reset, booked: ["2027-03-01"] }); b = body({ startDate: "2027-03-02", endDate: "2027-03-02", startTime: "06:00", endTime: "24:00" }); r = await submit(b);
+check("Tagesbuchung am Vortag blockiert Folgetag nicht (06–24 Uhr frei): 200", r.status === 200, JSON.stringify(r));
+for (const mode of ["noCount", "noUG", "gap"]) {
+  await mock({ ...reset, apaleo: mode }); b = body({ startDate: "2027-03-04", endDate: "2027-03-04" }); r = await submit(b);
+  check(`Unvollständige apaleo-Antwort (${mode}): 503 „nicht prüfbar“, nicht 409 „belegt“`, r.status === 503 && !r.json.conflictDates && (await count(b.email)) === 0, JSON.stringify(r));
+  const av = await fetch(`${APP}/api/availability?from=2029-0${["noCount","noUG","gap"].indexOf(mode)+1}&to=2029-0${["noCount","noUG","gap"].indexOf(mode)+1}`);
+  check(`Kalender bei ${mode}: 503 statt belegter Tage`, av.status === 503);
+}
+// 6c Echte apaleo-Daten (Wartung 22.10.2027 16:00 – 24.10.2027 10:00)
+await mock({ ...reset, apaleo: "fixture" });
+b = body({ startDate: "2027-10-22", endDate: "2027-10-25", endTime: "18:00" }); r = await submit(b);
+check("Echte apaleo-Daten: 22.–25.10.2027 → belegt 22., 23., 24. (Abend, ganztags, Morgen)", r.status === 409 && JSON.stringify(r.json.conflictDates) === '["2027-10-22","2027-10-23","2027-10-24"]', JSON.stringify(r.json));
+b = body({ startDate: "2027-10-24", endDate: "2027-10-24", startTime: "12:00", endTime: "15:00" }); r = await submit(b);
+check("Echte apaleo-Daten: 24.10.2027 nicht ganztägig frei (Sperre bis 10 Uhr) → als belegt gewertet", r.status === 409, JSON.stringify(r.json));
+b = body({ startDate: "2027-10-25", endDate: "2027-10-25", startTime: "06:00", endTime: "24:00" }); r = await submit(b);
+check("Echte apaleo-Daten: 25.10.2027 06–24 Uhr → frei, gespeichert", r.status === 200, JSON.stringify(r.json));
 // 7 API-Ausfall
 for (const mode of ["500", "204", "garbage", "tokenfail", "timeout"]) {
   await mock({ ...reset, apaleo: mode }); b = body({ startDate: "2027-02-22", endDate: "2027-02-22" }); r = await submit(b);

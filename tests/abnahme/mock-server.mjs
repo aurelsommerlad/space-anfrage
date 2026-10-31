@@ -1,9 +1,14 @@
 // Nachbildung von apaleo (Identity + Availability v1) und Resend für lokale Abnahmetests.
 // Zustand setzen: POST http://localhost:4010/__state  {"apaleo":"500","booked":["2027-02-10"],...}
 import http from "node:http";
+import { readFileSync } from "node:fs";
+const FIXTURE = JSON.parse(readFileSync(new URL("./fixtures/altus-2027-10.json", import.meta.url), "utf8"));
 const S = { apaleo: "ok", resend: "ok", booked: [], maint: [], nightBlocked: [], blockDays: [], mails: [], calls: [], tokenCalls: 0, dropDay: null };
 function days(from, to) { const out = []; let d = new Date(from + "T00:00:00Z"); const e = new Date(to + "T00:00:00Z"); while (d <= e) { out.push(d.toISOString().slice(0, 10)); d = new Date(d.getTime() + 86400000); } return out; }
-function off(day) { const m = Number(day.slice(5, 7)); return m >= 4 && m <= 10 ? "+02:00" : "+01:00"; } // vereinfachte Sommerzeit, genügt für Tests
+// Offset Europe/Berlin für einen lokalen Zeitpunkt (Tag + Stunde)
+function off(day, hour) { const t = new Date(`${day}T${String(hour).padStart(2, "0")}:00:00Z`); const h = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Berlin", hour: "2-digit", hourCycle: "h23" }).format(t)); const o = (h - hour + 24) % 24; return `+0${o}:00`; }
+const at = (day, hour) => `${day}T${String(hour).padStart(2, "0")}:00:00${off(day, hour)}`;
+const next = (day) => new Date(Date.parse(day + "T00:00:00Z") + 86400000).toISOString().slice(0, 10);
 function json(res, code, body) { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(body)); }
 http.createServer(async (req, res) => {
   let body = ""; for await (const c of req) body += c;
@@ -23,6 +28,11 @@ http.createServer(async (req, res) => {
     if (S.apaleo === "garbage") return json(res, 200, { foo: 1 });
     if (S.apaleo === "timeout") return; // nie antworten
     const p = url.searchParams, tpl = p.get("timeSliceTemplate");
+    if (S.apaleo === "fixture") {
+      // Echte apaleo-Antworten (siehe fixtures/), gefiltert auf from..to
+      const slices = FIXTURE[tpl].filter((ts) => ts.from.slice(0, 10) >= p.get("from") && ts.from.slice(0, 10) <= p.get("to"));
+      return json(res, 200, { timeSlices: slices, count: slices.length });
+    }
     if (p.get("propertyId") !== "ALTUS" || p.get("unitGroupIds") !== "ALTUS-SPACE") return json(res, 400, { message: "bad ids" });
     const slices = days(p.get("from"), p.get("to")).filter((d) => d !== S.dropDay).map((d) => {
       const isDay = tpl === "DayUse";
@@ -30,9 +40,12 @@ http.createServer(async (req, res) => {
       const maint = S.maint.includes(d);
       const night = !isDay && S.nightBlocked.includes(d);
       const blk = S.blockDays.includes(d);
-      const from = isDay ? `${d}T10:00:00${off(d)}` : `${d}T16:00:00${off(d)}`;
-      return { from, to: from, unitGroups: [{ unitGroup: { id: "ALTUS-SPACE", code: "SPACE", name: "SPACE" }, availableCount: booked || maint || night ? 0 : 1, sellableCount: 1, physicalCount: 1, houseCount: 1,
-        maintenance: { outOfService: 0, outOfOrder: 0, outOfInventory: maint ? 1 : 0 }, block: { definite: blk ? 1 : 0, tentative: 0, optional: 0, remaining: 0 } }] };
+      const from = isDay ? at(d, 10) : at(d, 16);
+      const to = isDay ? at(d, S.apaleo === "gap" ? 15 : 16) : at(next(d), 10);
+      const ug = { unitGroup: { id: "ALTUS-SPACE", code: "SPACE", name: "SPACE" }, availableCount: booked || maint || night ? 0 : 1, sellableCount: 1, physicalCount: 1, houseCount: 1,
+        maintenance: { outOfService: 0, outOfOrder: 0, outOfInventory: maint ? 1 : 0 }, block: { definite: blk ? 1 : 0, tentative: 0, optional: 0, remaining: 0 } };
+      if (S.apaleo === "noCount") delete ug.availableCount;
+      return { from, to, unitGroups: S.apaleo === "noUG" ? [] : [ug] };
     });
     return json(res, 200, { timeSlices: slices, count: slices.length });
   }

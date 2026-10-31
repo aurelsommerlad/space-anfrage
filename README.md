@@ -22,6 +22,7 @@ npm run dev                  # http://localhost:3000
 | `npm run dev`       | Lokale Vorschau                    |
 | `npm run build`     | Produktions-Build (wie auf Vercel) |
 | `npm run typecheck` | TypeScript-Prüfung                 |
+| `npm run db:migrate` | Datenbankschema anlegen/aktualisieren |
 | `npm test`          | Tests der Datumslogik (Node ≥ 22)  |
 | `tests/abnahme/`    | Abnahmetests für den Live-Modus (siehe unten) |
 
@@ -73,7 +74,7 @@ Die kompakte Anfrageleiste übernimmt die Textschrift der Website über `--e-glo
 | `EMBED_ALLOWED_ORIGINS` | für die Einbindung | `https://unique-places.com https://www.unique-places.com` (beim Build gelesen) |
 | `MAIL_TRANSPORT`, `APALEO_API_URL`, `APALEO_IDENTITY_URL`, `RESEND_API_URL` | nein | Nur für Tests. `MAIL_TRANSPORT=log` und `http://`-Adressen sind in Production gesperrt. |
 
-**Vorgehen:** Zuerst die Preview-Umgebung (Feature-Branch) auf `live` stellen und abnehmen. Production bleibt bis zur Abnahme auf `demo`.
+**Vorgehen:** Schritt für Schritt in [`docs/preview-einrichtung.md`](docs/preview-einrichtung.md), inklusive `BOOKING_MODE` gegenüber `BOOKING_DATA_SOURCE`. Zuerst wird die Preview (Feature-Branch) auf `live` gestellt und abgenommen. Production bleibt bis zur Abnahme auf `demo`.
 
 ## Ablauf
 
@@ -142,11 +143,22 @@ src/
 
 Die Oberfläche spricht ausschließlich mit `/api/*`, nie direkt mit apaleo.
 
-**apaleo-Verfügbarkeit** (`GET /availability/v1/unit-groups`): Die SPACE-Buchungen in apaleo sind Tagesnutzungen, je Veranstaltungstag eine. Abgefragt wird deshalb für jeden Tag des Zeitraums, **einschließlich des letzten Tages**:
-- die Tageszeitscheibe `DayUse` (10–16 Uhr),
-- die Abendzeitscheibe `OverNight`, die an diesem Tag beginnt (Abendveranstaltungen und Sperren ab 16 Uhr).
+**apaleo-Verfügbarkeit** (`GET /availability/v1/unit-groups`): Die Konfiguration von `ALTUS` wurde lesend abgeglichen:
+- Zeitscheibe `ALTUS-DAY`: DayUse, 10–16 Uhr.
+- Zeitscheibe `ALTUS-NIGHT`: OverNight, 16–10 Uhr.
+- SPACE-Rate: nur DayUse.
+- Wartungen können beliebige Zeiten haben.
 
-Ein Tag gilt nur als frei, wenn beide Zeitscheiben verfügbar sind: `availableCount ≥ 1`, keine Wartung (out of service/order/inventory), keine Block-Belegung. Netzwerkfehler, Zeitüberschreitung (8 s), HTTP-Fehler, unerwartete Antworten oder fehlende Tage führen zu einer Fehlermeldung, **nie zu „frei“**. Der Kalender nutzt einen Zwischenspeicher von 60 Sekunden. Beim Absenden wird immer frisch geprüft.
+Ein Tag D gilt nur als frei, wenn **der ganze Kalendertag (00–24 Uhr)** frei ist. Geprüft werden für jeden Tag des Zeitraums, **einschließlich des letzten Tages**:
+- OverNight des Vortags (00–10 Uhr),
+- DayUse (10–16 Uhr),
+- OverNight des Tages (16–24 Uhr).
+
+Damit sind alle wählbaren Zeiten (06–24 Uhr) einschließlich Auf- und Abbau abgedeckt. Die Lückenlosigkeit wird bei jeder Abfrage anhand der Zeitstempel kontrolliert.
+
+„Frei“ heißt: `availableCount ≥ 1`, keine Wartung, keine Block-Belegung. Netzwerkfehler, Zeitüberschreitung (8 s), HTTP-Fehler, unvollständige Antworten, fehlende Tage oder Lücken ergeben **„nicht prüfbar“**, nie „frei“ und nie „belegt“. Der Kalender zeigt nicht prüfbare Tage grau ohne „×“, mit Hinweis und „Erneut versuchen“. Der Kalender nutzt einen Zwischenspeicher von 60 Sekunden. Beim Absenden wird immer frisch geprüft.
+
+**Datenbank:** Das Schema steht versioniert in `src/server/schema.ts`. Anwenden mit `npm run db:migrate -- --ziel=<host>`, oder die App wendet es beim ersten Zugriff automatisch an. Row Level Security ist auf allen Tabellen aktiv. Anleitung für die Testumgebung: [`docs/preview-einrichtung.md`](docs/preview-einrichtung.md).
 
 **Ablauf beim Absenden (live):**
 1. Serverseitige Validierung.

@@ -155,6 +155,8 @@ export function BookingFlow({
   const [booked, setBooked] = useState<Set<IsoDate>>(() => new Set(initial.bookedDates));
   const [loadedMonths, setLoadedMonths] = useState<Set<IsoMonth>>(() => new Set(initial.loadedMonths));
   const [loadError, setLoadError] = useState(false);
+  /** Monate, deren Belegung nicht geprüft werden konnte (Fehler ≠ belegt). */
+  const [failedMonths, setFailedMonths] = useState<Set<IsoMonth>>(() => new Set());
   const inFlight = useRef(new Set<IsoMonth>());
 
   const [submitting, setSubmitting] = useState(false);
@@ -402,8 +404,15 @@ export function BookingFlow({
         return next;
       });
       setLoadedMonths((prev) => new Set([...prev, ...months]));
+      setFailedMonths((prev) => {
+        if (!months.some((m) => prev.has(m))) return prev;
+        const next = new Set(prev);
+        months.forEach((m) => next.delete(m));
+        return next;
+      });
     } catch {
       setLoadError(true);
+      setFailedMonths((prev) => new Set([...prev, ...months]));
     } finally {
       months.forEach((m) => inFlight.current.delete(m));
     }
@@ -441,6 +450,10 @@ export function BookingFlow({
       setNotice(`Dieser Tag ist nicht anfragbar. Anfragen sind ab ${formatDateShort(minDate)} möglich.`);
       return;
     }
+    if (failedMonths.has(monthOf(date)) && !loadedMonths.has(monthOf(date))) {
+      setNotice("Die Belegung für diesen Monat konnte gerade nicht geprüft werden. Bitte versuche es erneut.");
+      return;
+    }
     if (!loadedMonths.has(monthOf(date))) {
       setNotice("Die Belegung für diesen Monat wird noch geladen. Bitte versuche es gleich noch einmal.");
       return;
@@ -468,6 +481,10 @@ export function BookingFlow({
       return;
     }
     const days = eachDay(startDate, date);
+    if (days.some((d) => failedMonths.has(monthOf(d)) && !loadedMonths.has(monthOf(d)))) {
+      setNotice("Die Belegung für diesen Zeitraum konnte gerade nicht geprüft werden. Bitte versuche es erneut.");
+      return;
+    }
     if (days.some((d) => !loadedMonths.has(monthOf(d)))) {
       setNotice("Die Belegung für diesen Zeitraum wird noch geladen. Bitte versuche es gleich noch einmal.");
       return;
@@ -739,6 +756,7 @@ export function BookingFlow({
                       booked={booked}
                       loadedMonths={loadedMonths}
                       loadError={loadError}
+                      failedMonths={failedMonths}
                       onRetry={() => void loadMonths(month, addMonths(month, 1))}
                       onDayClick={onDayClick}
                       onModeChange={onModeChange}

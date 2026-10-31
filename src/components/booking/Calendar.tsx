@@ -25,6 +25,8 @@ export interface CalendarProps {
   booked: ReadonlySet<IsoDate>;
   loadedMonths: ReadonlySet<IsoMonth>;
   loadError: boolean;
+  /** Monate, deren Belegung nicht geprüft werden konnte – nie als „belegt“ darstellen. */
+  failedMonths: ReadonlySet<IsoMonth>;
   onRetry: () => void;
   start: IsoDate | null;
   end: IsoDate | null;
@@ -34,7 +36,7 @@ export interface CalendarProps {
   invalid?: boolean;
 }
 
-type DayState = "available" | "booked" | "past" | "unknown";
+type DayState = "available" | "booked" | "past" | "unknown" | "unchecked";
 
 /** Ab dieser Breite des Kalenderbereichs werden zwei Monate gezeigt. */
 const TWO_MONTHS_MIN_WIDTH = 600;
@@ -49,6 +51,7 @@ export function Calendar(props: CalendarProps) {
     booked,
     loadedMonths,
     loadError,
+    failedMonths,
     onRetry,
     start,
     end,
@@ -102,7 +105,7 @@ export function Calendar(props: CalendarProps) {
 
   function stateOf(date: IsoDate): DayState {
     if (date < minDate) return "past";
-    if (!loadedMonths.has(monthOf(date))) return "unknown";
+    if (!loadedMonths.has(monthOf(date))) return failedMonths.has(monthOf(date)) ? "unchecked" : "unknown";
     if (booked.has(date)) return "booked";
     return "available";
   }
@@ -171,6 +174,7 @@ export function Calendar(props: CalendarProps) {
     if (st === "booked") parts.push("belegt");
     if (st === "past") parts.push("nicht wählbar");
     if (st === "unknown") parts.push("Belegung wird geladen");
+    if (st === "unchecked") parts.push("Belegung konnte nicht geprüft werden");
     if (isStart && multiDay) parts.push("erster Tag");
     if (end && date === end && end !== start) parts.push("letzter Tag");
     if (selected && !multiDay) parts.push("ausgewählt");
@@ -295,7 +299,7 @@ export function Calendar(props: CalendarProps) {
         </ul>
         {loadError ? (
           <p className={styles.calStatus} role="alert">
-            Die Belegung konnte nicht geladen werden.{" "}
+            Die Belegung konnte gerade nicht geprüft werden.{" "}
             <button type="button" className={styles.linkButton} onClick={onRetry}>
               Erneut versuchen
             </button>

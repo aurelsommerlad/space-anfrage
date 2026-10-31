@@ -19,6 +19,7 @@ interface Props {
   booked: ReadonlySet<IsoDate>;
   loadedMonths: ReadonlySet<IsoMonth>;
   loadError: boolean;
+  failedMonths: ReadonlySet<IsoMonth>;
   onRetry: () => void;
   onDayClick: (date: IsoDate) => void;
   onModeChange: (multiDay: boolean) => void;
@@ -84,6 +85,7 @@ export function StepDate(p: Props) {
           booked={p.booked}
           loadedMonths={p.loadedMonths}
           loadError={p.loadError}
+          failedMonths={p.failedMonths}
           onRetry={p.onRetry}
           start={draft.startDate}
           end={end}

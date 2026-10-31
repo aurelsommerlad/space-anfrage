@@ -15,6 +15,9 @@ export function TimeFields({ draft, update, errors }: Props) {
   return (
     <fieldset className={styles.fieldset}>
       <legend className={styles.legendTitle}>Gewünschte Uhrzeit</legend>
+      <p className={styles.hint} style={{ marginTop: -4, marginBottom: 16 }}>
+        Bitte inklusive Auf- und Abbau.
+      </p>
       <div className={styles.twoCol}>
         <Field
           name="startTime"

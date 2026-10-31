@@ -754,7 +754,8 @@
   background: currentColor;
 }
 .day[data-state="past"],
-.day[data-state="unknown"] {
+.day[data-state="unknown"],
+.day[data-state="unchecked"] {
   color: var(--disabled);
   cursor: default;
 }

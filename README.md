@@ -55,7 +55,7 @@ Zwei Elementor-Widgets „HTML“:
 - **Vercel:** `EMBED_ALLOWED_ORIGINS` auf die Origin der WordPress-Seite setzen und neu deployen.
 
 **Ablauf:**
-1. **Leiste:** Sie prüft Von, Bis (optional, für mehrere Tage) und Personen. Gültig sind Anfragen ab morgen, Berliner Zeit. Dann öffnet sie im selben Tab `/space-anfrage/?beginn=YYYY-MM-DD[&ende=YYYY-MM-DD]&personen=N`. Personenbezogene Daten kommen nie in die URL.
+1. **Leiste:** Ein Datumsfeld öffnet einen Kalender als Popover (Desktop zwei Monate, mobil einer) für einen Tag oder einen zusammenhängenden Zeitraum; der letzte gewählte Tag zählt voll. Dazu kommen das Personenfeld und ein Pfeilbutton. Gültig sind Anfragen ab morgen, Berliner Zeit. Dann öffnet sie im selben Tab `/space-anfrage/?beginn=YYYY-MM-DD[&ende=YYYY-MM-DD]&personen=N`. Personenbezogene Daten kommen nie in die URL.
 2. **Widget B:** Es übernimmt ausschließlich `beginn`, `ende` und `personen` und gibt sie an `/embed` weiter. Andere Parameter werden verworfen.
 3. **Erneute Prüfung:** Die App prüft die Werte serverseitig, inklusive Belegung. Bis das Ergebnis da ist, zeigt sie „Dein Wunschtermin wird geprüft …“ und keinen Termin als verfügbar.
    - **Frei:** Die App geht direkt zum Schritt „Anlass“ mit dem Hinweis „… ist laut Kalender frei“ und dem Link „Termin ändern“. Die Uhrzeit wird dann im Schritt „Anlass“ abgefragt.

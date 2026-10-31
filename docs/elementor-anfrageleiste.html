@@ -1,160 +1,558 @@
 <!--
   SPACE im HØV – kompakte Anfrageleiste (Widget A)
-  Einfügen in ein Elementor-Widget "HTML" auf der SPACE-Präsentationsseite.
-  Öffnet nach Prüfung der Eingaben die Formularseite im selben Tab und
-  übergibt nur beginn, ende und personen (keine personenbezogenen Daten).
-  Zieladresse: TARGET_URL unten (eine Stelle). Tipp: Widget als globales
-  Elementor-Widget speichern, wenn die Leiste auf mehreren Seiten steht.
+  Einfügen in ein Elementor-Widget "HTML" auf der SPACE-Präsentationsseite
+  (einmal pro Seite). Öffnet nach Prüfung der Eingaben die Formularseite im
+  selben Tab und übergibt nur beginn, ende und personen – keine
+  personenbezogenen Daten. Zieladresse: TARGET_URL im Skript (eine Stelle).
 -->
-<form class="sa-bar" id="sa-bar" action="/space-anfrage/" method="get" novalidate>
-  <div class="sa-bar__field">
-    <label class="sa-bar__label" for="sa-bar-beginn">Von</label>
-    <input class="sa-bar__input" id="sa-bar-beginn" name="beginn" type="date" required aria-describedby="sa-bar-beginn-error" />
-    <p class="sa-bar__error" id="sa-bar-beginn-error" aria-live="polite"></p>
+<div id="sa-bar" class="sa-bar">
+  <form class="sa-bar__form" action="/space-anfrage/" method="get" novalidate>
+    <div class="sa-bar__date">
+      <span id="sa-bar-date-label" class="sa-bar__sr">Datum oder Zeitraum</span>
+      <button
+        type="button"
+        id="sa-bar-date"
+        class="sa-bar__datebtn"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-controls="sa-bar-pop"
+        aria-labelledby="sa-bar-date-label sa-bar-date-value"
+        aria-describedby="sa-bar-date-error"
+      >
+        <span class="sa-bar__placeholder" aria-hidden="true">Datum / Zeitraum</span>
+        <span id="sa-bar-date-value" class="sa-bar__value"></span>
+        <svg class="sa-bar__icon" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+          <rect x="2.5" y="4" width="15" height="13.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3" />
+          <path d="M2.5 8h15M6.5 2.2v3.4M13.5 2.2v3.4" fill="none" stroke="currentColor" stroke-width="1.3" />
+        </svg>
+      </button>
+    </div>
+    <div class="sa-bar__guests">
+      <label for="sa-bar-personen" class="sa-bar__sr">Personen</label>
+      <input
+        id="sa-bar-personen"
+        class="sa-bar__input"
+        name="personen"
+        type="text"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        maxlength="4"
+        autocomplete="off"
+        placeholder="Personen"
+        aria-describedby="sa-bar-personen-error"
+      />
+    </div>
+    <button type="submit" class="sa-bar__submit" aria-label="Verfügbarkeit prüfen">
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" focusable="false">
+        <path d="M4 11h13.5M12 5.5l5.5 5.5-5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+      </svg>
+    </button>
+  </form>
+  <div class="sa-bar__errors">
+    <p id="sa-bar-date-error" class="sa-bar__error" aria-live="polite"></p>
+    <p id="sa-bar-personen-error" class="sa-bar__error" aria-live="polite"></p>
   </div>
-  <div class="sa-bar__field">
-    <label class="sa-bar__label" for="sa-bar-ende">Bis <span class="sa-bar__optional">(bei mehreren Tagen)</span></label>
-    <input class="sa-bar__input" id="sa-bar-ende" name="ende" type="date" aria-describedby="sa-bar-ende-error" />
-    <p class="sa-bar__error" id="sa-bar-ende-error" aria-live="polite"></p>
+
+  <div id="sa-bar-pop" class="sa-pop" role="dialog" aria-label="Datum oder Zeitraum wählen" tabindex="-1" hidden>
+    <button type="button" class="sa-pop__nav sa-pop__nav--prev" aria-label="Vorheriger Monat">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M11 3.5 5.5 9l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.5" /></svg>
+    </button>
+    <button type="button" class="sa-pop__nav sa-pop__nav--next" aria-label="Nächster Monat">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M7 3.5 12.5 9 7 14.5" fill="none" stroke="currentColor" stroke-width="1.5" /></svg>
+    </button>
+    <div class="sa-pop__months"></div>
+    <div class="sa-pop__foot">
+      <div class="sa-pop__text">
+        <p class="sa-pop__hint">Wähle einen Tag oder einen Zeitraum.</p>
+        <p class="sa-pop__status" aria-live="polite"></p>
+      </div>
+      <button type="button" class="sa-pop__apply" disabled>Übernehmen</button>
+    </div>
   </div>
-  <div class="sa-bar__field sa-bar__field--guests">
-    <label class="sa-bar__label" for="sa-bar-personen">Personen</label>
-    <input class="sa-bar__input" id="sa-bar-personen" name="personen" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" required aria-describedby="sa-bar-personen-error" />
-    <p class="sa-bar__error" id="sa-bar-personen-error" aria-live="polite"></p>
-  </div>
-  <div class="sa-bar__action">
-    <button class="sa-bar__button" type="submit">Verfügbarkeit prüfen</button>
-  </div>
-</form>
+</div>
 
 <style>
-  .sa-bar {
+  /* ---------- Grundzustand: alles auf die Leiste begrenzt ---------- */
+  #sa-bar,
+  #sa-bar-pop {
     box-sizing: border-box;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 14px;
+    font-family: inherit;
+    color: #1e1e1e;
+    text-align: left;
+    line-height: 1.4;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+  #sa-bar *,
+  #sa-bar *::before,
+  #sa-bar *::after,
+  #sa-bar-pop *,
+  #sa-bar-pop *::before,
+  #sa-bar-pop *::after {
+    box-sizing: border-box;
+  }
+  #sa-bar {
+    position: relative;
     width: 100%;
     margin: 0;
-    padding: 16px;
-    background: #ffffff;
-    border: 1px solid #e5e5e5;
-    color: #171817;
-    font: inherit;
-    line-height: 1.4;
-    text-align: left;
+    padding: 0;
+    background: transparent;
+    border: 0;
   }
-  .sa-bar *,
-  .sa-bar *::before,
-  .sa-bar *::after {
-    box-sizing: border-box;
-  }
-  .sa-bar .sa-bar__field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
+  #sa-bar button,
+  #sa-bar input,
+  #sa-bar-pop button {
+    -webkit-appearance: none;
+    appearance: none;
     margin: 0;
+    min-width: 0;
+    min-height: 0;
+    max-width: none;
+    float: none;
+    font-family: inherit;
+    font-style: normal;
+    letter-spacing: normal;
+    text-transform: none;
+    text-decoration: none;
+    text-shadow: none;
+    text-indent: 0;
+    box-shadow: none;
+    filter: none;
+    opacity: 1;
+    transform: none;
+    transition: none;
+    vertical-align: middle;
+    outline: none;
   }
-  .sa-bar .sa-bar__label {
-    display: block;
+  #sa-bar p,
+  #sa-bar-pop p {
     margin: 0;
     padding: 0;
-    font-size: 13px;
-    line-height: 20px;
-    font-weight: 500;
-    color: #171817;
+  }
+  #sa-bar svg,
+  #sa-bar-pop svg {
+    display: block;
+    flex: none;
+    min-width: 0;
+    max-width: none;
+    fill: none;
+  }
+  #sa-bar .sa-bar__icon {
+    width: 20px;
+    height: 20px;
+  }
+  #sa-bar .sa-bar__submit svg {
+    width: 22px;
+    height: 22px;
+  }
+  #sa-bar-pop .sa-pop__nav svg {
+    width: 18px;
+    height: 18px;
+  }
+  #sa-bar .sa-bar__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
     white-space: nowrap;
+    border: 0;
+  }
+
+  /* ---------- Leiste ---------- */
+  #sa-bar .sa-bar__form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(120px, 24%, 200px) 60px;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  #sa-bar .sa-bar__date,
+  #sa-bar .sa-bar__guests {
+    position: relative;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+  }
+  #sa-bar .sa-bar__datebtn,
+  #sa-bar .sa-bar__input {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 60px;
+    padding: 0 18px;
+    background: #ffffff;
+    border: 1px solid #dcdcdc;
+    border-radius: 2px;
+    color: #1e1e1e;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 58px;
+    cursor: pointer;
+  }
+  #sa-bar .sa-bar__input {
+    display: block;
+    cursor: text;
+  }
+  #sa-bar .sa-bar__datebtn {
+    gap: 12px;
+    justify-content: space-between;
+    text-align: left;
+    white-space: nowrap;
+  }
+  #sa-bar .sa-bar__datebtn:hover,
+  #sa-bar .sa-bar__input:hover {
+    background: #ffffff;
+    border-color: #a8a8a8;
+    color: #1e1e1e;
+  }
+  #sa-bar .sa-bar__datebtn:focus-visible,
+  #sa-bar .sa-bar__input:focus,
+  #sa-bar .sa-bar__submit:focus-visible {
+    outline: 2px solid #1e1e1e;
+    outline-offset: 2px;
+  }
+  #sa-bar .sa-bar__datebtn:focus,
+  #sa-bar .sa-bar__input:focus {
+    background: #ffffff;
+    border-color: #1e1e1e;
+    color: #1e1e1e;
+  }
+  #sa-bar .sa-bar__datebtn[aria-expanded="true"] {
+    border-color: #1e1e1e;
+  }
+  #sa-bar .sa-bar__datebtn[aria-invalid="true"],
+  #sa-bar .sa-bar__input[aria-invalid="true"] {
+    border-color: #b42318;
+  }
+  #sa-bar .sa-bar__placeholder,
+  #sa-bar .sa-bar__input::placeholder {
+    color: #6b6b6b;
+    opacity: 1;
+  }
+  #sa-bar .sa-bar__placeholder,
+  #sa-bar .sa-bar__value {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .sa-bar .sa-bar__optional {
-    font-weight: 400;
-    color: #666666;
-  }
-  .sa-bar .sa-bar__input {
-    display: block;
-    width: 100%;
-    min-width: 0;
-    height: 48px;
-    margin: 0;
-    padding: 0 12px;
-    background: #ffffff;
-    border: 1px solid #d4d4d4;
-    border-radius: 2px;
-    box-shadow: none;
-    color: #171817;
-    font: inherit;
-    font-size: 16px;
-    line-height: 46px;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  .sa-bar .sa-bar__input::-webkit-date-and-time-value {
-    text-align: left;
-  }
-  .sa-bar .sa-bar__input:hover {
-    border-color: #a8a8a8;
-  }
-  .sa-bar .sa-bar__input:focus,
-  .sa-bar .sa-bar__input:focus-visible {
-    outline: 2px solid #1e1e1e;
-    outline-offset: 2px;
-    border-color: #1e1e1e;
-  }
-  .sa-bar .sa-bar__input[aria-invalid="true"] {
-    border-color: #b42318;
-  }
-  .sa-bar .sa-bar__error {
-    margin: 0;
-    padding: 0;
-    font-size: 13px;
-    line-height: 1.35;
-    color: #b42318;
-  }
-  .sa-bar .sa-bar__error:empty {
+  #sa-bar .sa-bar__value:empty {
     display: none;
   }
-  .sa-bar .sa-bar__button {
-    display: block;
-    width: 100%;
-    height: 48px;
-    margin: 0;
-    padding: 0 24px;
+  #sa-bar .sa-bar__datebtn[data-filled] .sa-bar__placeholder {
+    display: none;
+  }
+  #sa-bar .sa-bar__icon {
+    margin-left: auto;
+    color: #1e1e1e;
+  }
+  #sa-bar .sa-bar__submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    padding: 0;
     background: #1e1e1e;
     border: 1px solid #1e1e1e;
     border-radius: 2px;
-    box-shadow: none;
     color: #ffffff;
-    font: inherit;
+    cursor: pointer;
+  }
+  #sa-bar .sa-bar__submit:focus {
+    background: #1e1e1e;
+    border-color: #1e1e1e;
+    color: #ffffff;
+  }
+  @media (hover: hover) {
+    #sa-bar .sa-bar__submit:hover {
+      background: #3a3a3a;
+      border-color: #3a3a3a;
+    }
+  }
+  #sa-bar .sa-bar__errors {
+    margin: 0;
+    padding: 0;
+  }
+  #sa-bar .sa-bar__error {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #b42318;
+  }
+  #sa-bar .sa-bar__error:empty {
+    display: none;
+  }
+  @media (max-width: 599px) {
+    #sa-bar .sa-bar__form {
+      grid-template-columns: minmax(0, 1fr) 60px;
+    }
+    #sa-bar .sa-bar__date {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* ---------- Kalender-Popover ---------- */
+  #sa-bar-pop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 99999;
+    width: 380px;
+    margin: 0;
+    padding: 18px 16px 14px;
+    background: #ffffff;
+    border: 1px solid #e3e3e3;
+    border-radius: 6px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
     font-size: 16px;
+    outline: none;
+  }
+  #sa-bar-pop[hidden] {
+    display: none;
+  }
+  #sa-bar-pop.sa-pop--two {
+    padding: 22px 28px 18px;
+  }
+  #sa-bar-pop .sa-pop__nav {
+    position: absolute;
+    top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    color: #1e1e1e;
+    cursor: pointer;
+  }
+  #sa-bar-pop.sa-pop--two .sa-pop__nav {
+    top: 18px;
+  }
+  #sa-bar-pop .sa-pop__nav--prev {
+    left: 10px;
+  }
+  #sa-bar-pop .sa-pop__nav--next {
+    right: 10px;
+  }
+  #sa-bar-pop .sa-pop__nav:hover {
+    background: #f3f3f3;
+    color: #1e1e1e;
+  }
+  #sa-bar-pop .sa-pop__nav:focus-visible {
+    outline: 2px solid #1e1e1e;
+    outline-offset: 0;
+  }
+  #sa-bar-pop .sa-pop__nav[disabled] {
+    visibility: hidden;
+  }
+  #sa-bar-pop .sa-pop__months {
+    display: flex;
+    margin: 0;
+    padding: 0;
+  }
+  #sa-bar-pop .sa-pop__month {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  #sa-bar-pop.sa-pop--two .sa-pop__month + .sa-pop__month {
+    margin-left: 28px;
+    padding-left: 28px;
+    border-left: 1px solid #e8e8e8;
+  }
+  #sa-bar-pop .sa-pop__title {
+    height: 40px;
+    margin: 0 0 6px;
+    font-size: 19px;
+    font-weight: 400;
+    line-height: 40px;
+    text-align: center;
+    color: #1e1e1e;
+  }
+  #sa-bar-pop .sa-pop__title strong {
+    font-weight: 700;
+  }
+  #sa-bar-pop table {
+    width: 100%;
+    margin: 0;
+    border: 0;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+    table-layout: fixed;
+    background: transparent;
+  }
+  #sa-bar-pop th,
+  #sa-bar-pop td {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: center;
+    vertical-align: middle;
+  }
+  #sa-bar-pop th {
+    height: 30px;
+    font-size: 13px;
+    font-weight: 400;
+    color: #74736e;
+  }
+  #sa-bar-pop .sa-pop__day {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 44px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    color: #1e1e1e;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+  }
+  #sa-bar-pop .sa-pop__day:hover,
+  #sa-bar-pop .sa-pop__day:focus {
+    background: transparent;
+    color: #1e1e1e;
+  }
+  #sa-bar-pop .sa-pop__day::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 0;
+    right: 0;
+  }
+  #sa-bar-pop .sa-pop__day > span {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    max-width: 100%;
+    height: 40px;
+    border-radius: 50%;
+  }
+  /* Heute: dünne Kreislinie */
+  #sa-bar-pop .sa-pop__day.is-today > span {
+    box-shadow: inset 0 0 0 1px #9a9a9a;
+  }
+  /* Vergangene und nicht wählbare Tage */
+  #sa-bar-pop .sa-pop__day[aria-disabled="true"] {
+    color: #c9c9c9;
+    cursor: default;
+  }
+  #sa-bar-pop .sa-pop__day:not([aria-disabled="true"]):hover > span {
+    box-shadow: inset 0 0 0 1px #1e1e1e;
+  }
+  /* Zeitraum: hellgraues, zusammenhängendes Band */
+  #sa-bar-pop .sa-pop__day.is-range::before {
+    background: #ececec;
+  }
+  #sa-bar-pop .sa-pop__day.has-range.is-start::before {
+    left: 50%;
+    background: #ececec;
+  }
+  #sa-bar-pop .sa-pop__day.has-range.is-end::before {
+    right: 50%;
+    background: #ececec;
+  }
+  #sa-bar-pop .sa-pop__day.is-preview.is-range::before,
+  #sa-bar-pop .sa-pop__day.is-preview.has-range::before {
+    background: #f4f4f4;
+  }
+  /* Beginn und Ende */
+  #sa-bar-pop .sa-pop__day.is-start > span,
+  #sa-bar-pop .sa-pop__day.is-end:not(.is-preview) > span {
+    background: #1e1e1e;
+    color: #ffffff;
+    box-shadow: none;
+  }
+  #sa-bar-pop .sa-pop__day.is-end.is-preview > span {
+    box-shadow: inset 0 0 0 1px #1e1e1e;
+  }
+  /* Tastaturfokus: weißer + dunkler Ring */
+  #sa-bar-pop .sa-pop__day:focus-visible {
+    outline: none;
+  }
+  #sa-bar-pop .sa-pop__months .sa-pop__day.sa-pop__day:focus-visible > span {
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #1e1e1e;
+  }
+  #sa-bar-pop .sa-pop__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    margin-top: 10px;
+    padding-top: 14px;
+    border-top: 1px solid #ededed;
+  }
+  #sa-bar-pop .sa-pop__text {
+    min-width: 0;
+    flex: 1 1 200px;
+  }
+  #sa-bar-pop .sa-pop__hint {
+    font-size: 14px;
+    color: #6b6b6b;
+  }
+  #sa-bar-pop .sa-pop__status {
+    font-size: 14px;
+    color: #1e1e1e;
+  }
+  #sa-bar-pop .sa-pop__status:empty {
+    display: none;
+  }
+  #sa-bar-pop .sa-pop__apply {
+    height: 44px;
+    padding: 0 22px;
+    background: #1e1e1e;
+    border: 1px solid #1e1e1e;
+    border-radius: 2px;
+    color: #ffffff;
+    font-size: 15px;
     font-weight: 500;
-    line-height: 46px;
-    letter-spacing: normal;
-    text-transform: none;
+    line-height: 42px;
     white-space: nowrap;
     cursor: pointer;
   }
-  .sa-bar .sa-bar__button:hover {
-    background: #3a3a3a;
-    border-color: #3a3a3a;
+  #sa-bar-pop .sa-pop__apply:focus {
+    background: #1e1e1e;
+    border-color: #1e1e1e;
     color: #ffffff;
   }
-  .sa-bar .sa-bar__button:focus-visible {
+  @media (hover: hover) {
+    #sa-bar-pop .sa-pop__apply:not([disabled]):hover {
+      background: #3a3a3a;
+      border-color: #3a3a3a;
+    }
+  }
+  #sa-bar-pop .sa-pop__apply:focus-visible {
     outline: 2px solid #1e1e1e;
     outline-offset: 2px;
   }
-  @media (min-width: 768px) {
-    .sa-bar {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 120px auto;
-      align-items: start;
-      gap: 12px;
-      padding: 20px;
-    }
-    .sa-bar .sa-bar__action {
-      padding-top: 26px; /* Höhe der Beschriftung + Abstand */
-    }
-    .sa-bar .sa-bar__button {
-      width: auto;
+  #sa-bar-pop .sa-pop__apply[disabled] {
+    background: #1e1e1e;
+    border-color: #1e1e1e;
+    color: #ffffff;
+    opacity: 0.35;
+    cursor: default;
+  }
+  @media (max-width: 599px) {
+    #sa-bar-pop .sa-pop__apply {
+      width: 100%;
     }
   }
 </style>
@@ -165,93 +563,382 @@
     var TARGET_URL = "/space-anfrage/";
     /* ----------------------------------------------------------------- */
 
-    var form = document.getElementById("sa-bar");
-    if (!form) return;
-    form.setAttribute("action", TARGET_URL);
-    var startEl = document.getElementById("sa-bar-beginn");
-    var endEl = document.getElementById("sa-bar-ende");
+    var MAX_MONTHS_AHEAD = 24; // wie im Anfrageformular
+    var TWO_MONTHS_MIN_WIDTH = 760; // ab dieser Fensterbreite zwei Monate
+
+    var root = document.getElementById("sa-bar");
+    if (!root || root.getAttribute("data-ready")) return;
+    root.setAttribute("data-ready", "1");
+
+    var form = root.querySelector(".sa-bar__form");
+    var dateBtn = document.getElementById("sa-bar-date");
+    var dateValue = document.getElementById("sa-bar-date-value");
+    var dateErr = document.getElementById("sa-bar-date-error");
     var guestsEl = document.getElementById("sa-bar-personen");
+    var guestsErr = document.getElementById("sa-bar-personen-error");
+    var pop = document.getElementById("sa-bar-pop");
+    var monthsEl = pop.querySelector(".sa-pop__months");
+    var prevBtn = pop.querySelector(".sa-pop__nav--prev");
+    var nextBtn = pop.querySelector(".sa-pop__nav--next");
+    var statusEl = pop.querySelector(".sa-pop__status");
+    var applyBtn = pop.querySelector(".sa-pop__apply");
+    form.setAttribute("action", TARGET_URL);
+    // Popover an <body> hängen: nicht von Elementor-Containern abgeschnitten.
+    document.body.appendChild(pop);
 
-    // Datum in Europe/Berlin – unabhängig von der Zeitzone des Geräts.
+    var MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+    var WD_SHORT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+    var WD_LONG = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+
+    /* ---- Datumshilfen: reine Kalendertage "YYYY-MM-DD", Europe/Berlin ---- */
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
+    function iso(y, m, d) {
+      var t = new Date(Date.UTC(y, m, d));
+      return t.getUTCFullYear() + "-" + pad(t.getUTCMonth() + 1) + "-" + pad(t.getUTCDate());
+    }
+    function parts(s) { var p = s.split("-"); return [+p[0], +p[1] - 1, +p[2]]; }
+    function addDays(s, n) { var p = parts(s); return iso(p[0], p[1], p[2] + n); }
+    function monthOf(s) { return s.slice(0, 7); }
+    function addMonths(m, n) { var p = m.split("-"); return iso(+p[0], +p[1] - 1 + n, 1).slice(0, 7); }
+    function weekday(s) { var p = parts(s); return (new Date(Date.UTC(p[0], p[1], p[2])).getUTCDay() + 6) % 7; }
+    function daysInMonth(m) { var p = m.split("-"); return new Date(Date.UTC(+p[0], +p[1], 0)).getUTCDate(); }
     function todayBerlin() {
-      return new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit"
-      }).format(new Date());
+      return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
     }
-    function addDays(iso, n) {
-      var p = iso.split("-");
-      return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n)).toISOString().slice(0, 10);
+    function fmt(s) { var p = parts(s); return pad(p[2]) + "." + pad(p[1] + 1) + "." + p[0]; }
+    function fmtRange(a, b) {
+      if (!b || a === b) return fmt(a);
+      var pa = parts(a), pb = parts(b);
+      if (pa[0] === pb[0] && pa[1] === pb[1]) return pad(pa[2]) + ".–" + fmt(b);
+      if (pa[0] === pb[0]) return pad(pa[2]) + "." + pad(pa[1] + 1) + ".–" + fmt(b);
+      return fmt(a) + "–" + fmt(b);
     }
-    function isDate(v) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
-      var p = v.split("-");
-      var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
-      return d.toISOString().slice(0, 10) === v;
+    function countDays(a, b) {
+      var pa = parts(a), pb = parts(b);
+      return Math.round((Date.UTC(pb[0], pb[1], pb[2]) - Date.UTC(pa[0], pa[1], pa[2])) / 86400000) + 1;
     }
-    // Fallback für Browser ohne Datumsfeld: TT.MM.JJJJ akzeptieren.
-    function normalize(v) {
-      v = (v || "").trim();
-      var m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(v);
-      if (m) v = m[3] + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[1]).slice(-2);
-      return v;
-    }
-    function formatDe(iso) {
-      var p = iso.split("-");
-      return new Intl.DateTimeFormat("de-DE", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
-        .format(new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])));
-    }
+    function longLabel(s) { var p = parts(s); return WD_LONG[weekday(s)] + ", " + p[2] + ". " + MONTHS[p[1]] + " " + p[0]; }
 
-    var earliest = addDays(todayBerlin(), 1); // Anfragen ab morgen
-    startEl.min = earliest;
-    endEl.min = earliest;
-    startEl.addEventListener("change", function () {
-      var s = normalize(startEl.value);
-      if (isDate(s)) endEl.min = s;
-      clearError(startEl);
-    });
-    endEl.addEventListener("change", function () { clearError(endEl); });
-    guestsEl.addEventListener("input", function () {
-      guestsEl.value = guestsEl.value.replace(/[^\d]/g, "").slice(0, 4);
-      clearError(guestsEl);
-    });
+    var today = todayBerlin();
+    var earliest = addDays(today, 1); // Anfragen ab morgen
+    var minMonth = monthOf(today);
+    var maxMonth = addMonths(minMonth, MAX_MONTHS_AHEAD);
+    var latest = addDays(addMonths(maxMonth, 1) + "-01", -1);
 
-    function setError(el, msg) {
-      el.setAttribute("aria-invalid", "true");
-      document.getElementById(el.id + "-error").textContent = msg;
-    }
-    function clearError(el) {
-      el.removeAttribute("aria-invalid");
-      document.getElementById(el.id + "-error").textContent = "";
-    }
+    var committed = { start: null, end: null }; // übernommene Auswahl
+    var temp = { start: null, end: null }; // Auswahl im offenen Kalender
+    var hover = null;
+    var view = minMonth;
+    var focusDate = earliest;
+    var isOpen = false;
 
-    form.addEventListener("submit", function (event) {
-      event.preventDefault();
-      [startEl, endEl, guestsEl].forEach(clearError);
-      var start = normalize(startEl.value);
-      var end = normalize(endEl.value);
-      var guests = guestsEl.value.trim();
-      var invalid = [];
+    function isTwo() { return window.innerWidth >= TWO_MONTHS_MIN_WIDTH; }
+    function count() { return isTwo() ? 2 : 1; }
+    function selectable(d) { return d >= earliest && d <= latest; }
+    function el(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
 
-      if (!start) { setError(startEl, "Bitte wähle einen Tag."); invalid.push(startEl); }
-      else if (!isDate(start)) { setError(startEl, "Bitte gib ein gültiges Datum ein."); invalid.push(startEl); }
-      else if (start < earliest) { setError(startEl, "Anfragen sind ab " + formatDe(earliest) + " möglich."); invalid.push(startEl); }
+    /* ---- Darstellung ---- */
+    function buildMonth(m) {
+      var wrap = el("div", "sa-pop__month");
+      var p = m.split("-");
+      var title = el("div", "sa-pop__title");
+      title.id = "sa-pop-title-" + m;
+      var strong = el("strong");
+      strong.textContent = MONTHS[+p[1] - 1];
+      title.appendChild(strong);
+      title.appendChild(document.createTextNode(" " + p[0]));
+      wrap.appendChild(title);
 
-      if (end) {
-        if (!isDate(end)) { setError(endEl, "Bitte gib ein gültiges Datum ein."); invalid.push(endEl); }
-        else if (isDate(start) && end < start) { setError(endEl, "Das Ende darf nicht vor dem Beginn liegen."); invalid.push(endEl); }
+      var table = el("table");
+      table.setAttribute("role", "grid");
+      table.setAttribute("aria-labelledby", title.id);
+      var thead = el("thead"), hr = el("tr");
+      for (var w = 0; w < 7; w++) {
+        var th = el("th");
+        th.setAttribute("scope", "col");
+        th.setAttribute("abbr", WD_LONG[w]);
+        th.textContent = WD_SHORT[w];
+        hr.appendChild(th);
       }
+      thead.appendChild(hr);
+      table.appendChild(thead);
+      var tbody = el("tbody"), tr = el("tr");
+      var first = m + "-01", offset = weekday(first), total = daysInMonth(m);
+      for (var i = 0; i < offset; i++) tr.appendChild(el("td"));
+      for (var d = 1; d <= total; d++) {
+        var date = m + "-" + pad(d);
+        var td = el("td");
+        td.setAttribute("role", "gridcell");
+        var b = el("button", "sa-pop__day");
+        b.type = "button";
+        b.setAttribute("data-date", date);
+        var span = el("span");
+        span.setAttribute("aria-hidden", "true");
+        span.textContent = String(d);
+        b.appendChild(span);
+        td.appendChild(b);
+        tr.appendChild(td);
+        if (tr.children.length === 7) { tbody.appendChild(tr); tr = el("tr"); }
+      }
+      if (tr.children.length) {
+        while (tr.children.length < 7) tr.appendChild(el("td"));
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      return wrap;
+    }
 
-      if (!guests) { setError(guestsEl, "Bitte gib die Personenzahl an."); invalid.push(guestsEl); }
-      else if (!/^\d{1,4}$/.test(guests) || Number(guests) < 1) { setError(guestsEl, "Bitte gib eine ganze Zahl ab 1 an."); invalid.push(guestsEl); }
+    function build() {
+      var n = count();
+      if (view < minMonth) view = minMonth;
+      if (addMonths(view, n - 1) > maxMonth) view = addMonths(maxMonth, -(n - 1));
+      pop.classList.toggle("sa-pop--two", n === 2);
+      monthsEl.innerHTML = "";
+      for (var i = 0; i < n; i++) monthsEl.appendChild(buildMonth(addMonths(view, i)));
+      prevBtn.disabled = view <= minMonth;
+      nextBtn.disabled = addMonths(view, n - 1) >= maxMonth;
+      var shown = monthsEl.querySelector('[data-date="' + focusDate + '"]');
+      if (!shown) {
+        var firstSel = null, all = monthsEl.querySelectorAll(".sa-pop__day");
+        for (var j = 0; j < all.length; j++) {
+          if (selectable(all[j].getAttribute("data-date"))) { firstSel = all[j].getAttribute("data-date"); break; }
+        }
+        focusDate = firstSel || all[0].getAttribute("data-date");
+      }
+      paint();
+    }
 
-      if (invalid.length) { invalid[0].focus(); return; }
+    function paint() {
+      var s = temp.start, e = temp.end;
+      var previewEnd = s && !e && hover && hover > s ? hover : null;
+      var rangeEnd = e || previewEnd;
+      var hasRange = !!(s && rangeEnd && rangeEnd !== s);
+      var days = monthsEl.querySelectorAll(".sa-pop__day");
+      for (var i = 0; i < days.length; i++) {
+        var b = days[i], d = b.getAttribute("data-date");
+        var dis = !selectable(d);
+        var isStart = d === s;
+        var isEnd = !!rangeEnd && d === rangeEnd;
+        var inRange = hasRange && d > s && d < rangeEnd;
+        var preview = !!previewEnd && (isStart || inRange || isEnd);
+        b.classList.toggle("is-today", d === today);
+        b.classList.toggle("is-start", isStart);
+        b.classList.toggle("is-end", isEnd);
+        b.classList.toggle("is-range", inRange);
+        b.classList.toggle("has-range", hasRange && (isStart || isEnd));
+        b.classList.toggle("is-preview", preview);
+        if (dis) b.setAttribute("aria-disabled", "true");
+        else b.removeAttribute("aria-disabled");
+        b.tabIndex = d === focusDate ? 0 : -1;
+        var label = longLabel(d);
+        if (d === today) label += ", heute";
+        if (dis) label += ", nicht wählbar";
+        if (isStart) label += e && e !== s ? ", Beginn" : ", ausgewählt";
+        if (e && d === e && e !== s) label += ", Ende";
+        b.setAttribute("aria-label", label);
+        var selected = isStart || (!!e && (d === e || (d > s && d < e)));
+        b.parentNode.setAttribute("aria-selected", selected ? "true" : "false");
+      }
+      if (!s) statusEl.textContent = "";
+      else if (!e) statusEl.textContent = "Beginn " + fmt(s) + " – wähle das Ende oder übernimm diesen Tag.";
+      else {
+        var n = countDays(s, e);
+        statusEl.textContent = fmtRange(s, e) + " · " + n + (n === 1 ? " Tag" : " Tage");
+      }
+      applyBtn.disabled = !s;
+    }
+
+    function position() {
+      var vw = document.documentElement.clientWidth;
+      var r = dateBtn.getBoundingClientRect();
+      var w = Math.min(isTwo() ? 720 : 380, vw - 16);
+      pop.style.width = w + "px";
+      var left = r.left;
+      if (left + w > vw - 8) left = vw - 8 - w;
+      if (left < 8) left = 8;
+      pop.style.left = left + window.pageXOffset + "px";
+      pop.style.top = r.bottom + window.pageYOffset + 8 + "px";
+    }
+
+    function keepInView() {
+      var r = pop.getBoundingClientRect();
+      var over = r.bottom - window.innerHeight + 12;
+      if (over > 0) window.scrollBy(0, Math.min(over, r.top - 12));
+    }
+
+    function focusDay(d) {
+      var b = monthsEl.querySelector('[data-date="' + d + '"]');
+      if (b) b.focus();
+    }
+
+    /* ---- Öffnen / Schließen / Übernehmen ---- */
+    function open() {
+      temp = { start: committed.start, end: committed.end };
+      hover = null;
+      focusDate = temp.start || earliest;
+      view = temp.start ? monthOf(temp.start) : isTwo() ? minMonth : monthOf(earliest);
+      pop.hidden = false;
+      isOpen = true;
+      dateBtn.setAttribute("aria-expanded", "true");
+      position();
+      build();
+      keepInView();
+      focusDay(focusDate);
+    }
+    function close(returnFocus) {
+      if (!isOpen) return;
+      pop.hidden = true;
+      isOpen = false;
+      hover = null;
+      dateBtn.setAttribute("aria-expanded", "false");
+      if (returnFocus) dateBtn.focus();
+    }
+    function apply() {
+      if (!temp.start) return;
+      committed = { start: temp.start, end: temp.end || temp.start };
+      dateValue.textContent = fmtRange(committed.start, committed.end);
+      dateBtn.setAttribute("data-filled", "");
+      clearError(dateBtn, dateErr);
+      close(true);
+    }
+
+    function choose(d) {
+      if (!temp.start || temp.end || d < temp.start) {
+        temp.start = d;
+        temp.end = null;
+      } else {
+        temp.end = d; // derselbe Tag ist als Beginn und Ende erlaubt
+      }
+      hover = null;
+      focusDate = d;
+      paint();
+    }
+
+    function moveFocus(t) {
+      if (monthOf(t) < minMonth || monthOf(t) > maxMonth) return;
+      focusDate = t;
+      var n = count();
+      if (monthOf(t) < view) { view = monthOf(t); build(); }
+      else if (monthOf(t) > addMonths(view, n - 1)) { view = addMonths(monthOf(t), -(n - 1)); build(); }
+      else paint();
+      focusDay(t);
+    }
+
+    dateBtn.addEventListener("click", function () {
+      if (isOpen) close(false);
+      else open();
+    });
+    prevBtn.addEventListener("click", function () { view = addMonths(view, -1); build(); });
+    nextBtn.addEventListener("click", function () { view = addMonths(view, 1); build(); });
+    applyBtn.addEventListener("click", apply);
+
+    monthsEl.addEventListener("click", function (e) {
+      var b = e.target.closest ? e.target.closest(".sa-pop__day") : null;
+      if (!b || b.getAttribute("aria-disabled") === "true") return;
+      choose(b.getAttribute("data-date"));
+    });
+    monthsEl.addEventListener("mouseover", function (e) {
+      var b = e.target.closest ? e.target.closest(".sa-pop__day") : null;
+      var d = b && !b.getAttribute("aria-disabled") ? b.getAttribute("data-date") : null;
+      if (temp.start && !temp.end && d !== hover) { hover = d; paint(); }
+    });
+    monthsEl.addEventListener("mouseleave", function () {
+      if (hover) { hover = null; paint(); }
+    });
+    monthsEl.addEventListener("focusin", function (e) {
+      var b = e.target.closest ? e.target.closest(".sa-pop__day") : null;
+      if (b && temp.start && !temp.end) { hover = b.getAttribute("data-date"); paint(); }
+    });
+    monthsEl.addEventListener("keydown", function (e) {
+      var b = e.target.closest ? e.target.closest(".sa-pop__day") : null;
+      if (!b) return;
+      var d = b.getAttribute("data-date"), t = null;
+      switch (e.key) {
+        case "ArrowLeft": t = addDays(d, -1); break;
+        case "ArrowRight": t = addDays(d, 1); break;
+        case "ArrowUp": t = addDays(d, -7); break;
+        case "ArrowDown": t = addDays(d, 7); break;
+        case "Home": t = addDays(d, -weekday(d)); break;
+        case "End": t = addDays(d, 6 - weekday(d)); break;
+        case "PageUp":
+        case "PageDown": {
+          var m = addMonths(monthOf(d), e.key === "PageUp" ? -1 : 1);
+          t = m + "-" + pad(Math.min(parts(d)[2], daysInMonth(m)));
+          break;
+        }
+        default: return;
+      }
+      e.preventDefault();
+      moveFocus(t);
+    });
+
+    // Escape schließt ohne Übernahme; Tab bleibt in der Nähe der Leiste.
+    pop.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { e.preventDefault(); close(true); return; }
+      if (e.key !== "Tab") return;
+      var items = Array.prototype.filter.call(pop.querySelectorAll("button"), function (b) {
+        return !b.disabled && b.tabIndex >= 0 && b.offsetParent !== null;
+      });
+      if (!items.length) return;
+      if (!e.shiftKey && document.activeElement === items[items.length - 1]) {
+        e.preventDefault(); close(false); guestsEl.focus();
+      } else if (e.shiftKey && document.activeElement === items[0]) {
+        e.preventDefault(); close(true);
+      }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (isOpen && e.key === "Escape" && document.activeElement === dateBtn) close(false);
+    });
+    // Klick außerhalb schließt ohne Übernahme.
+    document.addEventListener("pointerdown", function (e) {
+      if (isOpen && !pop.contains(e.target) && !dateBtn.contains(e.target)) close(false);
+    }, true);
+    window.addEventListener("resize", function () {
+      if (!isOpen) return;
+      position();
+      build();
+    });
+
+    /* ---- Prüfen und weiterleiten ---- */
+    function setError(field, out, msg) { field.setAttribute("aria-invalid", "true"); out.textContent = msg; }
+    function clearError(field, out) { field.removeAttribute("aria-invalid"); out.textContent = ""; }
+
+    guestsEl.addEventListener("input", function () {
+      var v = guestsEl.value.replace(/[^\d]/g, "").slice(0, 4);
+      if (v !== guestsEl.value) guestsEl.value = v;
+      clearError(guestsEl, guestsErr);
+    });
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      close(false);
+      clearError(dateBtn, dateErr);
+      clearError(guestsEl, guestsErr);
+      var first = null;
+      if (!committed.start) {
+        setError(dateBtn, dateErr, "Bitte wähle einen Tag oder einen Zeitraum.");
+        first = dateBtn;
+      } else if (committed.start < earliest || committed.end > latest) {
+        setError(dateBtn, dateErr, "Bitte wähle einen Termin ab " + fmt(earliest) + ".");
+        first = dateBtn;
+      }
+      var g = guestsEl.value.trim();
+      if (!g) {
+        setError(guestsEl, guestsErr, "Bitte gib die Personenzahl an.");
+        first = first || guestsEl;
+      } else if (!/^\d{1,4}$/.test(g) || Number(g) < 1) {
+        setError(guestsEl, guestsErr, "Bitte gib eine ganze Zahl ab 1 an.");
+        first = first || guestsEl;
+      }
+      if (first) { first.focus(); return; }
 
       var url = new URL(TARGET_URL, window.location.href);
       url.search = "";
       url.hash = "";
-      url.searchParams.set("beginn", start);
-      if (end && end !== start) url.searchParams.set("ende", end);
-      url.searchParams.set("personen", String(Number(guests)));
+      url.searchParams.set("beginn", committed.start);
+      if (committed.end && committed.end !== committed.start) url.searchParams.set("ende", committed.end);
+      url.searchParams.set("personen", String(Number(g)));
       window.location.assign(url.toString());
     });
   })();

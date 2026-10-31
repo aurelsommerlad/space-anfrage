@@ -27,40 +27,44 @@
   max-width: 640px;
 }
 .eyebrow {
-  font-size: 12px;
-  letter-spacing: 0.12em;
+  font-size: var(--accent-size);
+  font-weight: var(--accent-weight);
+  letter-spacing: var(--accent-tracking);
   text-transform: uppercase;
   color: var(--muted);
   margin-bottom: 14px;
 }
 .title {
-  font-size: clamp(30px, 6.2vw, 46px);
-  line-height: 1.08;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-family: var(--font-heading);
+  font-size: var(--h1-size);
+  line-height: var(--h1-line);
+  font-weight: var(--heading-weight);
+  letter-spacing: var(--heading-tracking);
 }
 .lead {
+  font-size: var(--lead-size);
+  font-weight: var(--text-weight);
   margin-top: 16px;
   color: var(--muted);
-  font-size: 17px;
   max-width: 560px;
 }
 .breakAll {
+  font-weight: var(--strong-weight);
   overflow-wrap: anywhere;
   color: var(--text);
-  font-weight: 500;
 }
 
 .demoBanner {
+  font-size: var(--small-size);
+  font-weight: var(--small-weight);
   margin-top: 28px;
   padding: 12px 16px;
   border-left: 2px solid var(--accent);
   background: var(--subtle);
-  font-size: 14px;
   color: var(--text);
 }
 .demoBanner strong {
-  font-weight: 600;
+  font-weight: var(--strong-weight);
 }
 
 .layout {
@@ -112,6 +116,9 @@
   display: none;
 }
 .stepper li > * {
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
+  line-height: 1.25;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -123,14 +130,14 @@
   text-align: left;
   color: var(--muted);
   font: inherit;
-  font-size: 15px;
-  line-height: 1.25;
 }
 .stepper button {
   cursor: pointer;
   border-radius: var(--radius);
 }
 .stepNum {
+  font-size: var(--caption-size);
+  font-weight: var(--fw-medium);
   flex: none;
   display: grid;
   place-items: center;
@@ -140,8 +147,6 @@
   border: 1px solid var(--line-strong);
   background: var(--bg);
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 .stepName {
@@ -155,8 +160,8 @@
   color: var(--on-accent);
 }
 .stepper li[data-state="current"] .stepName {
+  font-weight: var(--fw-medium);
   color: var(--text);
-  font-weight: 600;
 }
 /* Erledigt: Häkchen, anklickbar */
 .stepper li[data-state="done"] .stepNum {
@@ -190,10 +195,10 @@
 /* Schmal: Nummer über der Beschriftung, zentriert, Umbruch erlaubt */
 @media (max-width: 599px) {
   .stepper li > * {
+    font-size: var(--caption-size);
     flex-direction: column;
     gap: 6px;
     text-align: center;
-    font-size: 13px;
   }
   .stepper li + li::before {
     display: block;
@@ -204,15 +209,19 @@
 }
 
 .stepCount {
-  font-size: 13px;
+  font-size: var(--accent-size);
+  font-weight: var(--accent-weight);
+  letter-spacing: var(--accent-tracking);
+  text-transform: uppercase;
   color: var(--muted);
   margin-bottom: 10px;
 }
 .stepTitle {
-  font-size: clamp(24px, 4.6vw, 32px);
-  line-height: 1.15;
-  font-weight: 500;
-  letter-spacing: -0.015em;
+  font-family: var(--font-heading);
+  font-size: var(--h2-size);
+  line-height: var(--h2-line);
+  font-weight: var(--heading-weight);
+  letter-spacing: var(--heading-tracking);
   outline: none;
 }
 .stepBody {
@@ -228,9 +237,9 @@
   min-width: 0;
 }
 .legendTitle {
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
   padding: 0;
-  font-size: 15px;
-  font-weight: 500;
   margin-bottom: 14px;
 }
 
@@ -240,20 +249,22 @@
   min-width: 0;
 }
 .label {
-  font-size: 15px;
-  font-weight: 500;
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
 }
 .optional {
-  font-weight: 400;
+  font-weight: var(--text-weight);
   color: var(--muted);
 }
 .hint {
-  font-size: 14px;
+  font-size: var(--small-size);
+  font-weight: var(--text-weight);
   color: var(--muted);
   margin-top: -2px;
 }
 .error {
-  font-size: 14px;
+  font-size: var(--small-size);
+  font-weight: var(--small-weight);
   color: var(--error);
 }
 .error::before {
@@ -272,13 +283,14 @@
 .input,
 .select,
 .textarea {
+  font-size: var(--input-size);
+  font-weight: var(--input-weight);
   width: 100%;
   min-height: 50px;
   padding: 12px 14px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  font-size: 16px; /* verhindert Zoom in iOS */
   transition: border-color 0.15s ease;
 }
 .input:hover,
@@ -309,12 +321,12 @@
   padding-right: 40px;
 }
 .textarea {
+  line-height: var(--text-line);
   resize: vertical;
   min-height: 132px;
-  line-height: 1.5;
 }
 .counter {
-  font-size: 12px;
+  font-size: var(--micro-size);
   color: var(--muted);
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -352,10 +364,11 @@
   cursor: pointer;
 }
 .segmented span {
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
   display: block;
   padding: 12px 10px;
   text-align: center;
-  font-size: 15px;
   color: var(--muted);
 }
 .segmented label + label span {
@@ -432,24 +445,26 @@
   transform: scale(1);
 }
 .option input:checked ~ .optionLabel {
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 .optionLabel {
-  font-size: 17px;
+  font-size: var(--lead-size);
+  font-weight: var(--label-weight);
 }
 .fieldset[data-invalid] .options {
   border-top-color: var(--error);
 }
 
 .checkbox {
+  font-size: var(--text-size);
+  font-weight: var(--label-weight);
   display: flex;
   gap: 14px;
   align-items: flex-start;
   cursor: pointer;
   position: relative;
   padding: 4px 0;
-  font-size: 16px;
 }
 .checkbox input {
   position: absolute;
@@ -489,14 +504,16 @@
 }
 
 .callout {
-  font-size: 14px;
+  font-size: var(--small-size);
+  font-weight: var(--small-weight);
   color: var(--muted);
   padding-top: 20px;
   border-top: 1px solid var(--line);
 }
 
 .notice {
-  font-size: 14px;
+  font-size: var(--small-size);
+  font-weight: var(--small-weight);
   color: var(--text);
   padding: 10px 14px;
   background: var(--subtle);
@@ -504,8 +521,9 @@
 }
 
 .demoInline {
+  font-size: var(--small-size);
+  font-weight: var(--small-weight);
   margin-top: 40px;
-  font-size: 14px;
   color: var(--text);
   padding: 12px 16px;
   border-left: 2px solid var(--accent);
@@ -513,9 +531,10 @@
 }
 
 .formError {
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
   margin-top: 24px;
   color: var(--error);
-  font-size: 15px;
 }
 
 /* ------------------------------------------------------------------ */
@@ -537,11 +556,12 @@
 }
 .primary,
 .secondary {
+  font-size: var(--button-size);
+  font-weight: var(--button-weight);
+  letter-spacing: var(--button-tracking);
   min-height: 54px;
   padding: 0 28px;
   border-radius: var(--radius);
-  font-size: 16px;
-  font-weight: 500;
   cursor: pointer;
   width: 100%;
   transition:
@@ -578,12 +598,12 @@
   background: var(--subtle);
 }
 .linkButton {
+  font-size: var(--small-size);
+  font-weight: var(--fw-regular);
   background: none;
   border: 0;
   padding: 4px 0;
   color: var(--text);
-  font-size: 14px;
-  font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: var(--line-strong);
@@ -649,13 +669,15 @@
   margin-bottom: 12px;
 }
 .calTitle {
+  font-family: var(--font-heading);
+  font-size: var(--calendar-title-size);
+  font-weight: var(--heading-weight);
+  letter-spacing: var(--heading-tracking);
   height: 44px;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  font-weight: 500;
 }
 .calNav {
   width: 44px;
@@ -683,8 +705,8 @@
   table-layout: fixed;
 }
 .calGrid th {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--micro-size);
+  font-weight: var(--fw-regular);
   color: var(--muted);
   padding: 0 0 8px;
   text-align: center;
@@ -694,6 +716,8 @@
   text-align: center;
 }
 .day {
+  font-size: var(--day-size);
+  font-weight: var(--fw-regular);
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -704,7 +728,6 @@
   background: none;
   border: 0;
   border-radius: 0;
-  font-size: 15px;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   color: var(--text);
@@ -817,13 +840,14 @@
   margin-top: 14px;
 }
 .legend {
+  font-size: var(--caption-size);
+  font-weight: var(--small-weight);
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 8px 18px;
-  font-size: 13px;
   color: var(--muted);
 }
 .legend li {
@@ -858,7 +882,8 @@
   text-decoration: line-through;
 }
 .calStatus {
-  font-size: 13px;
+  font-size: var(--caption-size);
+  font-weight: var(--small-weight);
   color: var(--muted);
 }
 .selectionRow {
@@ -870,7 +895,8 @@
   margin-top: 6px;
 }
 .selection {
-  font-size: 15px;
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
 }
 
 /* ------------------------------------------------------------------ */
@@ -881,8 +907,10 @@
   padding-top: 8px;
 }
 .reviewTitle {
-  font-size: 18px;
-  font-weight: 500;
+  font-family: var(--font-heading);
+  font-size: var(--h3-size);
+  line-height: var(--h3-line);
+  font-weight: var(--heading-weight);
   margin-bottom: 8px;
 }
 .reviewGroup {
@@ -896,12 +924,13 @@
   gap: 16px;
 }
 .reviewHead h4 {
-  margin: 0;
-  font-size: 13px;
-  letter-spacing: 0.1em;
+  font-size: var(--accent-size);
+  font-weight: var(--accent-weight);
+  letter-spacing: var(--accent-tracking);
   text-transform: uppercase;
+  font-family: var(--font-text);
+  margin: 0;
   color: var(--muted);
-  font-weight: 500;
 }
 .reviewList {
   margin: 8px 0 0;
@@ -922,8 +951,9 @@
   }
 }
 .reviewRow dt {
+  font-size: var(--small-size);
+  font-weight: var(--small-weight);
   color: var(--muted);
-  font-size: 14px;
 }
 .reviewRow dd {
   margin: 0;
@@ -969,15 +999,20 @@
   will-change: transform;
 }
 .summaryVenue {
-  font-size: 20px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-family: var(--font-heading);
+  font-size: var(--h3-size);
+  line-height: var(--h3-line);
+  font-weight: var(--heading-weight);
+  letter-spacing: var(--heading-tracking);
 }
 .summaryVenueSmall {
-  font-weight: 500;
+  font-family: var(--font-heading);
+  font-size: var(--lead-size);
+  font-weight: var(--heading-weight);
 }
 .venueLine {
-  font-size: 14px;
+  font-size: var(--small-size);
+  font-weight: var(--text-weight);
   color: var(--muted);
   margin-top: 4px;
 }
@@ -992,22 +1027,25 @@
   gap: 2px;
 }
 .summaryRow dt {
-  font-size: 12px;
-  letter-spacing: 0.08em;
+  font-size: var(--accent-size);
+  font-weight: var(--accent-weight);
+  letter-spacing: var(--accent-tracking);
   text-transform: uppercase;
   color: var(--muted);
 }
 .summaryRow dd {
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
   margin: 0;
-  font-size: 15px;
   overflow-wrap: anywhere;
 }
 .summaryRow dd[data-empty] {
   color: var(--muted);
 }
 .summaryNote {
+  font-size: var(--caption-size);
+  font-weight: var(--small-weight);
   margin-top: 20px;
-  font-size: 13px;
   color: var(--muted);
 }
 
@@ -1042,13 +1080,15 @@
   content: "–";
 }
 .summaryCompactLabel {
-  font-size: 12px;
-  letter-spacing: 0.08em;
+  font-size: var(--accent-size);
+  font-weight: var(--accent-weight);
+  letter-spacing: var(--accent-tracking);
   text-transform: uppercase;
   color: var(--muted);
 }
 .summaryCompactLine {
-  font-size: 15px;
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1077,12 +1117,13 @@
 /* ------------------------------------------------------------------ */
 
 .checking {
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 40px 0;
   color: var(--muted);
-  font-size: 15px;
 }
 .spinner {
   width: 16px;
@@ -1103,12 +1144,15 @@
   }
 }
 .prefillNotice {
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
   padding: 14px 16px;
   border-left: 2px solid var(--error);
   background: var(--subtle);
-  font-size: 15px;
 }
 .prefillOk {
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -1116,7 +1160,6 @@
   gap: 8px 20px;
   padding: 14px 16px;
   border: 1px solid var(--line);
-  font-size: 15px;
 }
 .prefillOk p {
   display: flex;
@@ -1125,6 +1168,6 @@
   min-width: 0;
 }
 .okMark {
+  font-weight: var(--fw-medium);
   flex: none;
-  font-weight: 600;
 }

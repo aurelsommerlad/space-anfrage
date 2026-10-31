@@ -17,7 +17,64 @@
 
   --gutter: 20px;
   --radius: 2px;
-  --font: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* ---------------------------------------------------------------
+     Typografie – zentral an einer Stelle.
+     Abgeleitet aus den globalen Elementor-Stilen von unique-places.com
+     (Kit 1202): Text = Roboto 300 16px/1.5, Akzent = Roboto 400 12px
+     Versalien 1px, Überschriften = Josefin Sans 400, Buttons = Roboto 400
+     mit 1px Laufweite. Schriften selbst gehostet (src/app/fonts.ts).
+     --------------------------------------------------------------- */
+  --font-text: var(--font-roboto), "Helvetica Neue", Arial, sans-serif;
+  --font-heading: var(--font-josefin), "Helvetica Neue", Arial, sans-serif;
+  --font: var(--font-text);
+
+  --fw-light: 300;
+  --fw-regular: 400;
+  --fw-medium: 500;
+
+  /* Fließtext */
+  --text-size: 16px;
+  --text-weight: var(--fw-light);
+  --text-line: 1.5;
+  --lead-size: 17px;
+  --strong-weight: var(--fw-medium);
+
+  /* Beschriftungen, Feldwerte, Auswahl */
+  --label-size: 15px;
+  --label-weight: var(--fw-regular);
+  --input-size: 16px; /* mind. 16px: kein Zoom auf iOS */
+  --input-weight: var(--fw-regular);
+
+  /* Kleinere Texte: Hinweise, Fehler, Nebeninfos */
+  --small-size: 14px;
+  --small-weight: var(--fw-regular);
+  --caption-size: 13px;
+  --micro-size: 12px;
+
+  /* Akzent: kleine Versalien-Zeilen (Elementor "Accent") */
+  --accent-size: 12px;
+  --accent-weight: var(--fw-regular);
+  --accent-tracking: 1px;
+
+  /* Überschriften (Josefin Sans, wie die Überschriften der Website) */
+  --heading-weight: 400;
+  --heading-tracking: 0.01em;
+  --h1-size: clamp(32px, 6.2vw, 48px);
+  --h1-line: 1.15;
+  --h2-size: clamp(26px, 4.6vw, 34px);
+  --h2-line: 1.2;
+  --h3-size: 21px;
+  --h3-line: 1.3;
+
+  /* Buttons (wie Elementor-Button "Senden") */
+  --button-size: 16px;
+  --button-weight: var(--fw-regular);
+  --button-tracking: 1px;
+
+  /* Kalender */
+  --calendar-title-size: 19px;
+  --day-size: 15px;
 }
 
 @media (min-width: 720px) {
@@ -41,9 +98,10 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font);
-  font-size: 16px;
-  line-height: 1.55;
+  font-family: var(--font-text);
+  font-size: var(--text-size);
+  font-weight: var(--text-weight);
+  line-height: var(--text-line);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
@@ -61,6 +119,19 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  font-weight: var(--heading-weight);
+  letter-spacing: var(--heading-tracking);
+}
+
+strong,
+b {
+  font-weight: var(--strong-weight);
 }
 
 :focus-visible {

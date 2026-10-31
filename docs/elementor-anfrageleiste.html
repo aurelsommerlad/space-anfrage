@@ -1,5 +1,5 @@
 <!--
-  SPACE im HØV – kompakte Anfrageleiste (Widget A), Version 7
+  SPACE im HØV – kompakte Anfrageleiste (Widget A), Version 8
   Einfügen in ein Elementor-Widget "HTML". Darf mehrfach auf einer Seite stehen.
   Die Leiste ist reines HTML/CSS und immer sichtbar. Der Kalender kommt als
   Datei von der App (letzte Zeile) – WordPress kann den Code so nicht verändern.
@@ -47,6 +47,12 @@
     background: transparent !important;
     box-shadow: none !important;
   }
+  /* Schrift: Textschrift der Website (Elementor-Variable, z. B. Roboto).
+     Fehlt die Variable, wird die Schrift der Umgebung geerbt. */
+  .sa-leiste.sa-leiste.sa-leiste {
+    --sa-font: var(--e-global-typography-text-font-family);
+    font-family: var(--sa-font), -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  }
   .sa-leiste.sa-leiste.sa-leiste {
     display: block !important;
     width: 100% !important;
@@ -55,7 +61,6 @@
     border: 0 !important;
     background: transparent !important;
     color: #1e1e1e !important;
-    font-family: inherit !important;
     font-size: 16px !important;
     line-height: 1.4 !important;
     text-align: left !important;
@@ -249,4 +254,4 @@
   }
 </style>
 
-<script src="https://space-anfrage.vercel.app/anfrageleiste.js?v=7" defer></script>
+<script src="https://space-anfrage.vercel.app/anfrageleiste.js?v=8" defer></script>

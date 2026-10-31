@@ -19,9 +19,22 @@ npm run dev                  # http://localhost:3000
 | `npm run typecheck` | TypeScript-Prüfung                 |
 | `npm test`          | Tests der Datumslogik (Node ≥ 22)  |
 
-Stack: Next.js 16 (App Router), React 19, TypeScript 5.9, zod 4, Schrift Geist (selbst gehostet über das npm-Paket `geist`).
+Stack: Next.js 16 (App Router), React 19, TypeScript 5.9, zod 4.
 
 Gestaltung: weißer Hintergrund, Anthrazit `#1E1E1E` für Buttons, Auswahl und Fokus, dezente Grautöne für Linien und Nebenflächen. Belegte Tage sind nicht nur farblich, sondern auch durch Durchstreichung, Schraffur und „×“ gekennzeichnet. Alle Farben stehen als Variablen in `src/app/globals.css`.
+
+## Typografie
+
+Angeglichen an unique-places.com (globale Elementor-Stile):
+- **Roboto:** Fließtext 300, Beschriftungen und Buttons 400.
+- **Josefin Sans 400:** Überschriften.
+- **Akzentzeilen:** Roboto 400, 12 px, Versalien, 1 px Laufweite.
+
+Die Schriften sind selbst gehostet (`src/app/fonts/`, SIL Open Font License) und werden über `next/font/local` eingebunden (`src/app/fonts.ts`). Es gibt keine externe Schriftanbindung.
+
+Alle Schriftgrößen, Schnitte und Laufweiten stehen zentral als Variablen in `src/app/globals.css` (Abschnitt „Typografie“). Die Komponenten verwenden nur diese Variablen.
+
+Die kompakte Anfrageleiste übernimmt die Textschrift der Website über `--e-global-typography-text-font-family` und erbt sonst die Schrift der Umgebung. Felder, Buttons und Kalender verwenden dieselbe Schrift.
 
 ## Deployment (Vercel)
 
@@ -50,7 +63,7 @@ Zwei Elementor-Widgets „HTML“:
 | B – vollständiges Formular (iframe) | [`docs/elementor-formular.html`](docs/elementor-formular.html) | `/space-anfrage/` |
 
 **Einstellungen:**
-- **Widget A:** Leiste als HTML/CSS im Widget, der Kalender wird als Datei `https://<app>/anfrageleiste.js` (aus `public/anfrageleiste.js`) per `<script src>` geladen. So kann WordPress den Skriptcode nicht verändern, und Änderungen am Kalender erfordern nur ein Vercel-Deployment. Einstellungen im `<form>` des Widgets: `action` (Adresse der Formularseite, Standard `/space-anfrage/`) und `data-header-offset` (Höhe eines fixierten Website-Headers). Ohne Skript bleibt die Leiste sichtbar; der Pfeil sendet dann nur die Personenzahl. Prüfen im Browser: `window.SpaceAnfrageKalender` und `data-sa-ready="7"` am `<form>`.
+- **Widget A:** Leiste als HTML/CSS im Widget, der Kalender wird als Datei `https://<app>/anfrageleiste.js` (aus `public/anfrageleiste.js`) per `<script src>` geladen. So kann WordPress den Skriptcode nicht verändern, und Änderungen am Kalender erfordern nur ein Vercel-Deployment. Einstellungen im `<form>` des Widgets: `action` (Adresse der Formularseite, Standard `/space-anfrage/`) und `data-header-offset` (Höhe eines fixierten Website-Headers). Ohne Skript bleibt die Leiste sichtbar; der Pfeil sendet dann nur die Personenzahl. Prüfen im Browser: `window.SpaceAnfrageKalender` und `data-sa-ready="8"` am `<form>`.
 - **Widget B:** `APP_ORIGIN` (Vercel-Adresse der App) und `SCROLL_OFFSET` (Höhe eines fixierten Website-Headers).
 - **Vercel:** `EMBED_ALLOWED_ORIGINS` auf die Origin der WordPress-Seite setzen und neu deployen.
 

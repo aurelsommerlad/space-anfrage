@@ -17,23 +17,26 @@
   gap: 14px;
 }
 .name {
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-family: var(--font-heading);
+  font-weight: var(--heading-weight);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-size: 14px;
+  font-size: 16px;
 }
 .place,
 .operator {
-  color: var(--muted);
-  font-size: 13px;
-  letter-spacing: 0.08em;
+  font-size: var(--accent-size);
+  font-weight: var(--accent-weight);
+  letter-spacing: var(--accent-tracking);
   text-transform: uppercase;
+  color: var(--muted);
 }
 .footer {
+  font-size: var(--caption-size);
+  font-weight: var(--small-weight);
   border-top: 1px solid var(--line);
   margin-top: 96px;
   color: var(--muted);
-  font-size: 13px;
 }
 .footer .inner {
   padding-top: 28px;

@@ -1,5 +1,5 @@
 /*!
- * SPACE im HØV – Anfrageleiste: Kalender (Version 7)
+ * SPACE im HØV – Anfrageleiste: Kalender (Version 8)
  * Wird vom Elementor-Widget per <script src> geladen. Die Leiste selbst ist
  * HTML/CSS im Widget und bleibt ohne dieses Skript sichtbar.
  * Übergeben werden nur beginn, ende und personen – keine personenbezogenen Daten.
@@ -13,7 +13,7 @@
   var DEFAULT_TARGET = "/space-anfrage/";
   var DEFAULT_HEADER_OFFSET = 100;
 
-  var VERSION = "7";
+  var VERSION = "8";
   var MAX_MONTHS_AHEAD = 24;
   var TWO_MONTHS_MIN_WIDTH = 760;
   var SELECTOR = "form[data-sa-leiste]";
@@ -164,7 +164,13 @@
     // Kalender: eigene Ebene an <body> mit eigenem Shadow DOM.
     var popHost = document.createElement("div");
     popHost.setAttribute("data-sa-leiste-kalender", String(n));
-    popHost.setAttribute("style", POP_HOST_STYLE);
+    // Gleiche Schrift wie die Leiste (das Popover hängt am <body>, dessen Schrift abweichen kann).
+    function syncFont() {
+      var barFont = "";
+      try { barFont = getComputedStyle(form).fontFamily || ""; } catch (e) { barFont = ""; }
+      popHost.setAttribute("style", POP_HOST_STYLE + (barFont ? "font-family:" + barFont.replace(/[;!{}<>]/g, "") + "!important;" : ""));
+    }
+    syncFont();
     var proot = popHost.attachShadow({ mode: "open" });
     proot.innerHTML = "<style>" + POP_CSS + "</style>" + POP_HTML;
     document.body.appendChild(popHost);
@@ -341,6 +347,7 @@
       hover = null;
       focusDate = temp.start || earliest;
       view = monthOf(temp.start || earliest);
+      syncFont();
       pop.hidden = false;
       openInstance = api;
       dateBtn.setAttribute("aria-expanded", "true");

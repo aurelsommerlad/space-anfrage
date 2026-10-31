@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const state = getModeState();
   if (state.mode === "misconfigured") {
     log.error("config.misconfigured", { problems: state.problems });
-    return fail(503, { error: "Anfragen sind gerade nicht möglich. Bitte schreib uns an stay@unique-places.com." });
+    return fail(503, { error: "Anfragen sind gerade nicht möglich." });
   }
 
   const len = Number(req.headers.get("content-length") ?? "0");

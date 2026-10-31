@@ -1,6 +1,6 @@
 import "server-only";
 import postgres from "postgres";
-import { MIGRATION_LOCK_KEY, MIGRATIONS, MIGRATIONS_TABLE_SQL } from "./schema";
+import { FOREIGN_DB_MESSAGE, FOREIGN_TABLES_SQL, HAS_MIGRATIONS_TABLE_SQL, MIGRATION_LOCK_KEY, MIGRATIONS, MIGRATIONS_TABLE_SQL } from "./schema";
 
 /**
  * Postgres-Anbindung (z. B. Neon über den Vercel Marketplace).
@@ -48,6 +48,11 @@ export async function ensureSchema(databaseUrl: string): Promise<Sql> {
 export async function migrate(sql: Sql): Promise<number[]> {
   return sql.begin(async (tx) => {
     await tx`select pg_advisory_xact_lock(${MIGRATION_LOCK_KEY})`;
+    const present = (await tx.unsafe<{ present: boolean }[]>(HAS_MIGRATIONS_TABLE_SQL))[0]?.present ?? false;
+    if (!present) {
+      const foreign = await tx.unsafe<{ name: string }[]>(FOREIGN_TABLES_SQL);
+      if (foreign.length) throw new Error(FOREIGN_DB_MESSAGE);
+    }
     await tx.unsafe(MIGRATIONS_TABLE_SQL);
     const done = new Set((await tx<{ id: number }[]>`select id from space_schema_migrations`).map((r) => r.id));
     const applied: number[] = [];

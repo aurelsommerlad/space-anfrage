@@ -18,7 +18,8 @@ http.createServer(async (req, res) => {
     S.tokenCalls++;
     if (S.apaleo === "tokenfail") return json(res, 401, { error: "invalid_client" });
     if (!/^Basic /.test(req.headers.authorization || "") || !body.includes("grant_type=client_credentials")) return json(res, 400, {});
-    return json(res, 200, { access_token: "tok-" + Date.now(), expires_in: 3600, token_type: "Bearer" });
+    const payload = Buffer.from(JSON.stringify({ scope: S.scopes ?? ["availability.read"], client_id: "test" })).toString("base64url");
+    return json(res, 200, { access_token: "tok-" + Date.now() + "." + payload + ".sig", expires_in: 3600, token_type: "Bearer" });
   }
   if (url.pathname === "/availability/v1/unit-groups") {
     S.calls.push(Object.fromEntries(url.searchParams));
@@ -49,6 +50,7 @@ http.createServer(async (req, res) => {
     });
     return json(res, 200, { timeSlices: slices, count: slices.length });
   }
+  if (url.pathname === "/domains") return json(res, 401, { statusCode: 401, name: "restricted_api_key", message: "This API key is restricted to only send emails" });
   if (url.pathname === "/emails") {
     const b = JSON.parse(body);
     if (S.resend === "fail" || (S.resend === "failGuest" && !String(b.to).includes("stay@"))) return json(res, 500, { name: "internal_server_error", message: "x" });

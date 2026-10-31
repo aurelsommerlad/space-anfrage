@@ -74,7 +74,10 @@ Die kompakte Anfrageleiste übernimmt die Textschrift der Website über `--e-glo
 | `EMBED_ALLOWED_ORIGINS` | für die Einbindung | `https://unique-places.com https://www.unique-places.com` (beim Build gelesen) |
 | `MAIL_TRANSPORT`, `APALEO_API_URL`, `APALEO_IDENTITY_URL`, `RESEND_API_URL` | nein | Nur für Tests. `MAIL_TRANSPORT=log` und `http://`-Adressen sind in Production gesperrt. |
 
-**Vorgehen:** Schritt für Schritt in [`docs/preview-einrichtung.md`](docs/preview-einrichtung.md), inklusive `BOOKING_MODE` gegenüber `BOOKING_DATA_SOURCE`. Zuerst wird die Preview (Feature-Branch) auf `live` gestellt und abgenommen. Production bleibt bis zur Abnahme auf `demo`.
+**Vorgehen:** Schritt für Schritt in [`docs/live-einrichtung.md`](docs/live-einrichtung.md), inklusive `BOOKING_MODE` gegenüber `BOOKING_DATA_SOURCE`:
+1. Einrichten, während Production noch im Demomodus läuft.
+2. Im geschützten Selbsttest `/intern/selbsttest` prüfen (Datenbank, apaleo, Resend; ohne Anzeige von Geheimnissen).
+3. Mit `BOOKING_MODE=live` umschalten.
 
 ## Ablauf
 
@@ -158,7 +161,7 @@ Damit sind alle wählbaren Zeiten (06–24 Uhr) einschließlich Auf- und Abbau a
 
 „Frei“ heißt: `availableCount ≥ 1`, keine Wartung, keine Block-Belegung. Netzwerkfehler, Zeitüberschreitung (8 s), HTTP-Fehler, unvollständige Antworten, fehlende Tage oder Lücken ergeben **„nicht prüfbar“**, nie „frei“ und nie „belegt“. Der Kalender zeigt nicht prüfbare Tage grau ohne „×“, mit Hinweis und „Erneut versuchen“. Der Kalender nutzt einen Zwischenspeicher von 60 Sekunden. Beim Absenden wird immer frisch geprüft.
 
-**Datenbank:** Das Schema steht versioniert in `src/server/schema.ts`. Anwenden mit `npm run db:migrate -- --ziel=<host>`, oder die App wendet es beim ersten Zugriff automatisch an. Row Level Security ist auf allen Tabellen aktiv. Anleitung für die Testumgebung: [`docs/preview-einrichtung.md`](docs/preview-einrichtung.md).
+**Datenbank:** Das Schema steht versioniert in `src/server/schema.ts`. Anwenden mit `npm run db:migrate -- --ziel=<host>`, oder die App wendet es beim ersten Zugriff automatisch an. Row Level Security ist auf allen Tabellen aktiv. Enthält die Datenbank fremde Tabellen und noch kein SPACE-Schema, wird aus Sicherheitsgründen nichts angelegt. Einrichtung: [`docs/live-einrichtung.md`](docs/live-einrichtung.md).
 
 **Ablauf beim Absenden (live):**
 1. Serverseitige Validierung.
@@ -171,6 +174,14 @@ Damit sind alle wählbaren Zeiten (06–24 Uhr) einschließlich Auf- und Abbau a
 Der Erfolg wird erst nach dem Speichern gemeldet. Eine fehlgeschlagene E-Mail ändert daran nichts: Sie wird protokolliert und in `/intern` oder per Cron erneut versendet.
 
 **Doppelte Einsendungen:** Jede Anfrage trägt einen im Browser erzeugten Schlüssel. Gleicher Schlüssel (Doppelklick, erneutes Senden nach Netzfehler) oder gleiche E-Mail, gleicher Termin und gleicher Anlass innerhalb von 30 Minuten ergeben dieselbe Referenz. Es entsteht kein zweiter Datensatz und es gehen keine weiteren E-Mails raus.
+
+**Selbsttest:** `/intern/selbsttest` prüft:
+- Konfiguration,
+- Datenbank (Verbindung, Schema, Row Level Security),
+- apaleo (Token, nur `availability.read`, lückenlose Verfügbarkeit der nächsten 90 Tage),
+- Resend (DKIM, SPF, DMARC, Key).
+
+Über Schaltflächen lassen sich das Schema anlegen und eine Test-E-Mail senden. Der Selbsttest läuft auch im Demomodus. Er zeigt keine Geheimnisse an.
 
 **Interne Übersicht:** `https://<app>/intern` (HTTP Basic Auth mit `ADMIN_USER`/`ADMIN_PASSWORD`, `noindex`, `no-store`) listet alle gespeicherten Anfragen mit Status und E-Mail-Status. Je Anfrage gibt es:
 - Status und interne Notiz ändern,

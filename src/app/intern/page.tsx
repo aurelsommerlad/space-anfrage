@@ -19,6 +19,9 @@ export default async function InternPage() {
     return (
       <main className={styles.page}>
         <h1>Anfragen</h1>
+        <p className={styles.meta}>
+          <Link href="/intern/selbsttest">Selbsttest</Link>
+        </p>
         <p className={styles.notice}>
           {state.mode === "demo"
             ? "Demomodus: Es werden keine Anfragen gespeichert."
@@ -32,7 +35,7 @@ export default async function InternPage() {
     <main className={styles.page}>
       <h1>Anfragen</h1>
       <p className={styles.meta}>
-        Umgebung: {state.config.environment} · {rows.length} Anfragen (neueste zuerst)
+        Umgebung: {state.config.environment} · {rows.length} Anfragen (neueste zuerst) · <Link href="/intern/selbsttest">Selbsttest</Link>
       </p>
       <div className={styles.scroll}>
         <table className={styles.table}>

@@ -50,12 +50,16 @@ export function deploymentEnvironment(): string {
   return env("VERCEL_ENV") || (process.env.NODE_ENV === "production" ? "production" : "development");
 }
 
-/** Ermittelt die Betriebsart. Nennt bei Fehlern nur Variablennamen, nie Werte. */
-export function getModeState(): ModeState {
-  const raw = env("BOOKING_MODE") || (env("BOOKING_DATA_SOURCE") === "apaleo" ? "live" : env("BOOKING_DATA_SOURCE"));
-  if (raw === "" || raw === "demo") return { mode: "demo" };
-  if (raw !== "live") return { mode: "misconfigured", problems: [`BOOKING_MODE hat einen ungültigen Wert (erlaubt: demo, live)`] };
+/** Rohwert der Betriebsart (BOOKING_MODE, sonst Kompatibilität mit BOOKING_DATA_SOURCE). */
+export function rawBookingMode(): string {
+  return env("BOOKING_MODE") || (env("BOOKING_DATA_SOURCE") === "apaleo" ? "live" : env("BOOKING_DATA_SOURCE"));
+}
 
+/**
+ * Liest die Live-Konfiguration unabhängig von der Betriebsart (auch für den
+ * Selbsttest vor der Umstellung). Nennt bei Fehlern nur Variablennamen, nie Werte.
+ */
+export function readLiveConfig(): { config: LiveConfig; problems: [] } | { config: null; problems: string[] } {
   const problems: string[] = [];
   const need = (name: string) => {
     const v = env(name);
@@ -71,6 +75,7 @@ export function getModeState(): ModeState {
     identityUrl: env("APALEO_IDENTITY_URL") || "https://identity.apaleo.com",
   };
   const databaseUrl = need("DATABASE_URL");
+  if (databaseUrl && !/^postgres(ql)?:\/\//.test(databaseUrl)) problems.push("DATABASE_URL ist keine Postgres-Verbindung");
   const transport = env("MAIL_TRANSPORT") || "resend";
   const environment = deploymentEnvironment();
   if (transport !== "resend" && transport !== "log") problems.push("MAIL_TRANSPORT hat einen ungültigen Wert (erlaubt: resend, log)");
@@ -85,7 +90,9 @@ export function getModeState(): ModeState {
       .filter(Boolean),
     replyTo: env("MAIL_REPLY_TO") || null,
   };
+  if (mail.from && !mailFromAddress(mail.from)) problems.push("MAIL_FROM ist keine gültige Absenderadresse");
   if (mail.internalTo.length === 0) problems.push("MAIL_INTERNAL_TO fehlt");
+  else if (mail.internalTo.some((a) => !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(a))) problems.push("MAIL_INTERNAL_TO enthält eine ungültige Adresse");
   const hashSecret = need("REQUEST_HASH_SECRET");
   if (hashSecret && hashSecret.length < 32) problems.push("REQUEST_HASH_SECRET ist zu kurz (mind. 32 Zeichen)");
   for (const u of [apaleo.apiUrl, apaleo.identityUrl, mail.apiUrl]) {
@@ -93,8 +100,24 @@ export function getModeState(): ModeState {
       problems.push("Eine Dienst-URL ist ungültig (nur https)");
     }
   }
-  if (problems.length) return { mode: "misconfigured", problems };
-  return { mode: "live", config: { apaleo, databaseUrl, mail, hashSecret, environment } };
+  if (problems.length) return { config: null, problems };
+  return { config: { apaleo, databaseUrl, mail, hashSecret, environment }, problems: [] };
+}
+
+/** Absenderadresse aus MAIL_FROM ("Name <a@b.de>" oder "a@b.de"). */
+export function mailFromAddress(from: string): string | null {
+  const m = /<([^<>\s@]+@[^<>\s@]+\.[a-z]{2,})>\s*$/i.exec(from) ?? /^([^<>\s@]+@[^<>\s@]+\.[a-z]{2,})$/i.exec(from.trim());
+  return m ? m[1]! : null;
+}
+
+/** Ermittelt die Betriebsart. Nennt bei Fehlern nur Variablennamen, nie Werte. */
+export function getModeState(): ModeState {
+  const raw = rawBookingMode();
+  if (raw === "" || raw === "demo") return { mode: "demo" };
+  if (raw !== "live") return { mode: "misconfigured", problems: [`BOOKING_MODE hat einen ungültigen Wert (erlaubt: demo, live)`] };
+  const r = readLiveConfig();
+  if (!r.config) return { mode: "misconfigured", problems: r.problems };
+  return { mode: "live", config: r.config };
 }
 
 /** Kompatibilität: Datenquelle für die Oberfläche. */

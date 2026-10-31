@@ -795,7 +795,9 @@ export function BookingFlow({
 
                 {submitError ? (
                   <p className={styles.formError} role="alert">
-                    {submitError}
+                    {submitError}{" "}
+                    Du erreichst uns auch direkt unter{" "}
+                    <a href="mailto:stay@unique-places.com">stay@unique-places.com</a>.
                   </p>
                 ) : null}
 

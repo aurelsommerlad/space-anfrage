@@ -121,6 +121,23 @@ async function deliver(cfg: LiveConfig, to: string[], mail: { subject: string; h
   }
 }
 
+/** Selbsttest: Test-E-Mail an MAIL_INTERNAL_TO. Liefert die Resend-ID oder wirft mit Fehlergrund (ohne Geheimnisse). */
+export async function sendTestEmail(cfg: LiveConfig): Promise<string> {
+  const when = new Date().toLocaleString("de-DE", { timeZone: "Europe/Berlin" });
+  const intro = `Diese E-Mail wurde vom Selbsttest der SPACE-Anfragestrecke versendet (${when}). Absender, Domain-Authentifizierung und Zustellung an die interne Adresse funktionieren.`;
+  return deliver(
+    cfg,
+    cfg.mail.internalTo,
+    {
+      subject: "[TEST] SPACE-Anfragestrecke: Selbsttest E-Mail-Versand",
+      html: layout("Selbsttest E-Mail-Versand", esc(intro), [["Umgebung", cfg.environment]], "Keine Anfrage, keine Reservierung."),
+      text: text(intro, [["Umgebung", cfg.environment]], "Keine Anfrage, keine Reservierung."),
+      replyTo: null,
+    },
+    `selbsttest-${Date.now()}`,
+  );
+}
+
 /** Versendet ausstehende bzw. fehlgeschlagene Mails einer Anfrage. Wirft nie. */
 export async function sendRequestEmails(
   cfg: LiveConfig,

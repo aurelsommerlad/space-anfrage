@@ -302,7 +302,8 @@ export function Calendar(props: CalendarProps) {
             Die Belegung konnte gerade nicht geprüft werden.{" "}
             <button type="button" className={styles.linkButton} onClick={onRetry}>
               Erneut versuchen
-            </button>
+            </button>{" "}
+            oder schreib uns an <a href="mailto:stay@unique-places.com">stay@unique-places.com</a>.
           </p>
         ) : !loaded ? (
           <p className={styles.calStatus} role="status">

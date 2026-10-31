@@ -101,5 +101,26 @@ begin
 end $$;
 `;
 
+/** Tabellen, die zu SPACE gehören. */
+export const OWN_TABLES = ["anfragen", "anfrage_emails", "anfrage_rate_limits", "space_schema_migrations"];
+
+/**
+ * Fremde Tabellen im aktuellen Schema. Ist noch kein SPACE-Schema vorhanden, aber
+ * es gibt fremde Tabellen, ist das vermutlich nicht die SPACE-Datenbank:
+ * dann wird nichts angelegt.
+ */
+export const FOREIGN_TABLES_SQL = `
+select c.relname as name from pg_class c join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = current_schema() and c.relkind in ('r', 'p', 'v', 'm')
+and c.relname <> all (array['anfragen','anfrage_emails','anfrage_rate_limits','space_schema_migrations'])
+order by 1`;
+
+export const HAS_MIGRATIONS_TABLE_SQL = `
+select exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = current_schema() and c.relname = 'space_schema_migrations') as present`;
+
+export const FOREIGN_DB_MESSAGE =
+  "Die Datenbank enthält fremde Tabellen und noch kein SPACE-Schema. Vermutlich ist DATABASE_URL nicht die SPACE-Datenbank. Es wurde nichts angelegt.";
+
 /** Schlüssel für pg_advisory_xact_lock, damit Migrationen nie parallel laufen. */
 export const MIGRATION_LOCK_KEY = 7_302_026;

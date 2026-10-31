@@ -212,6 +212,22 @@ export async function getApaleoBlockedDatesCached(cfg: Cfg, from: IsoDate, to: I
   }
 }
 
+/**
+ * Selbsttest: holt ein frisches Token und liest die gewährten Scopes aus dem
+ * JWT (ohne das Token selbst preiszugeben).
+ */
+export async function checkApaleoAccess(cfg: Cfg): Promise<{ scopes: string[] | null }> {
+  token = null;
+  const access = await getToken(cfg);
+  try {
+    const payload = JSON.parse(Buffer.from(access.split(".")[1] ?? "", "base64url").toString("utf8")) as { scope?: string | string[] };
+    const scope = payload.scope;
+    return { scopes: Array.isArray(scope) ? scope : typeof scope === "string" ? scope.split(" ") : null };
+  } catch {
+    return { scopes: null };
+  }
+}
+
 /** Nur für Tests: Zwischenspeicher leeren. */
 export function resetApaleoCaches() {
   cache.clear();

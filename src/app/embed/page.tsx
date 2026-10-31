@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BookingFlow } from "@/components/booking/BookingFlow";
+import { getEmbedAllowedOrigins } from "@/server/config";
 import { getInitialBookingData } from "@/server/initial-data";
 
 export const dynamic = "force-dynamic";
@@ -9,11 +10,10 @@ export const metadata: Metadata = {
 };
 
 /**
- * Einbettungsmodus ohne Header und Footer, z. B. per
- * <iframe src="https://…/embed" title="Anfrage SPACE im HØV"></iframe>.
- * Die Höhe wird per postMessage an die einbettende Seite gemeldet.
+ * Einbettungsmodus ohne Header, Footer und Markenbereich.
+ * Einbindung und Höhenanpassung: siehe docs/einbindung-elementor.md
  */
 export default async function EmbedPage() {
   const initial = await getInitialBookingData();
-  return <BookingFlow initial={initial} embed />;
+  return <BookingFlow initial={initial} embed embedOrigins={getEmbedAllowedOrigins()} />;
 }

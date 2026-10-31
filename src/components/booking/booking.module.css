@@ -8,9 +8,19 @@
   padding: 48px var(--gutter) 0;
   outline: none;
 }
+/* Einbettungsmodus: minimale Außenabstände (Platz für Fokusrahmen),
+   den seitlichen Abstand gibt der Elementor-Container vor. */
 .main[data-embed] {
-  padding-top: 24px;
-  padding-bottom: 32px;
+  padding: 6px 6px 12px;
+}
+.main[data-embed] .demoBanner {
+  margin-top: 0;
+}
+.main[data-embed] .layout {
+  margin-top: 28px;
+}
+.main[data-embed] .form {
+  margin-top: 36px;
 }
 
 .intro {
@@ -45,7 +55,7 @@
   margin-top: 28px;
   padding: 12px 16px;
   border-left: 2px solid var(--accent);
-  background: var(--accent-soft);
+  background: var(--subtle);
   font-size: 14px;
   color: var(--text);
 }
@@ -222,14 +232,14 @@
 .input:hover,
 .select:hover,
 .textarea:hover {
-  border-color: #cfcac0;
+  border-color: var(--line-strong);
 }
 .input:focus-visible,
 .select:focus-visible,
 .textarea:focus-visible {
-  outline: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
 }
 .input[aria-invalid="true"],
 .select[aria-invalid="true"],
@@ -241,7 +251,7 @@
 }
 .select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%2374736E' stroke-width='1.3'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23666666' stroke-width='1.3'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 14px center;
   padding-right: 40px;
@@ -299,9 +309,13 @@
 .segmented label + label span {
   border-left: 1px solid var(--line);
 }
+.segmented input:not(:checked) + span:hover {
+  background: var(--subtle);
+  color: var(--text);
+}
 .segmented input:checked + span {
-  background: var(--text);
-  color: var(--bg);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 .segmented input:focus-visible + span {
   outline: 2px solid var(--accent);
@@ -317,9 +331,23 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 18px 4px;
+  padding: 18px 16px;
   border-bottom: 1px solid var(--line);
   cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+.option:hover {
+  background: var(--subtle);
+}
+.option:has(input:checked) {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-bottom-color: var(--accent);
+}
+.option:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  z-index: 1;
 }
 .option input {
   position: absolute;
@@ -331,7 +359,7 @@
   flex: none;
   width: 18px;
   height: 18px;
-  border: 1px solid #b9b5ac;
+  border: 1px solid var(--line-strong);
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -341,12 +369,12 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--on-accent);
   transform: scale(0);
   transition: transform 0.15s ease;
 }
 .option input:checked ~ .optionMark {
-  border-color: var(--accent);
+  border-color: var(--on-accent);
 }
 .option input:checked ~ .optionMark::after {
   transform: scale(1);
@@ -354,15 +382,7 @@
 .option input:checked ~ .optionLabel {
   font-weight: 500;
 }
-.option input:focus-visible ~ .optionMark {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-}
-.option:hover .optionLabel {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--line);
-}
+
 .optionLabel {
   font-size: 17px;
 }
@@ -390,11 +410,14 @@
   width: 20px;
   height: 20px;
   margin-top: 2px;
-  border: 1px solid #b9b5ac;
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--surface);
   display: grid;
   place-items: center;
+}
+.checkbox:hover .checkboxMark {
+  border-color: var(--accent);
 }
 .checkbox input:checked + .checkboxMark {
   background: var(--accent);
@@ -424,7 +447,8 @@
   font-size: 14px;
   color: var(--text);
   padding: 10px 14px;
-  background: #efece5;
+  background: var(--subtle);
+  border-left: 2px solid var(--line-strong);
 }
 
 .demoInline {
@@ -433,7 +457,7 @@
   color: var(--text);
   padding: 12px 16px;
   border-left: 2px solid var(--accent);
-  background: var(--accent-soft);
+  background: var(--subtle);
 }
 
 .formError {
@@ -481,7 +505,7 @@
 }
 .primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border: 1px solid var(--accent);
 }
 .primary:hover {
@@ -498,18 +522,19 @@
   border: 1px solid var(--line);
 }
 .secondary:hover {
-  border-color: var(--text);
+  border-color: var(--accent);
+  background: var(--subtle);
 }
 .linkButton {
   background: none;
   border: 0;
   padding: 4px 0;
-  color: var(--accent);
+  color: var(--text);
   font-size: 14px;
   font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 3px;
-  text-decoration-color: rgba(82, 102, 78, 0.35);
+  text-decoration-color: var(--line-strong);
   cursor: pointer;
 }
 .linkButton:hover {
@@ -553,8 +578,11 @@
 .calNav:hover:not(:disabled) {
   border-color: var(--line);
 }
+.calNav:hover:not(:disabled) {
+  background: var(--subtle);
+}
 .calNav:disabled {
-  color: #c9c5bc;
+  color: var(--disabled);
   cursor: default;
 }
 .calGrid {
@@ -599,7 +627,7 @@
   border-radius: 50%;
 }
 .day[data-state="available"]:hover > span {
-  box-shadow: inset 0 0 0 1px var(--text);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .day[data-today] > span::after {
   content: "";
@@ -612,54 +640,81 @@
 }
 .day[data-state="past"],
 .day[data-state="unknown"] {
-  color: #bdb9b0;
+  color: var(--disabled);
   cursor: default;
 }
+/* Belegt: zusätzlich zur Farbe durchgestrichen, schraffiert und mit "×" markiert */
 .day[data-state="booked"] {
-  color: #a9a59c;
+  color: #8c8c8c;
   cursor: not-allowed;
 }
 .day[data-state="booked"] > span {
-  background: repeating-linear-gradient(
-    -45deg,
-    transparent 0 4px,
-    rgba(116, 115, 110, 0.16) 4px 5px
-  );
+  background: repeating-linear-gradient(-45deg, transparent 0 4px, rgba(0, 0, 0, 0.09) 4px 5px);
   text-decoration: line-through;
-  text-decoration-color: rgba(116, 115, 110, 0.6);
+  text-decoration-color: #8c8c8c;
+}
+.day > span > .dayMark {
+  font-style: normal;
+  position: absolute;
+  top: -1px;
+  right: -3px;
+  width: auto;
+  height: auto;
+  font-size: 10px;
+  line-height: 1;
+  color: #8c8c8c;
+}
+
+/* Auswahl: Start, Ende und alle Tage dazwischen in #1E1E1E mit weißer Schrift.
+   Während der Vorschau (Maus/Fokus vor dem zweiten Klick) nur hellgrau. */
+.day {
+  --range: var(--accent);
+}
+.day[data-preview] {
+  --range: var(--accent-soft);
+}
+/* Band hinter den Tagen eines Zeitraums – so hoch wie die Tageskreise */
+.day::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: min(40px, 100%);
+  transform: translateY(-50%);
+}
+.day[data-in-range]::before {
+  background: var(--range);
 }
 .day[data-in-range] {
-  background: var(--accent-soft);
+  color: var(--on-accent);
 }
-.day[data-preview][data-in-range] {
-  background: #eef1ec;
+.day[data-in-range][data-preview] {
+  color: var(--text);
 }
-.day[data-start][data-end] {
-  background: none;
+.day[data-has-range][data-start]::before {
+  left: 50%;
+  background: var(--range);
 }
-.day[data-start]:not([data-end]) {
-  background: linear-gradient(to right, transparent 50%, var(--accent-soft) 50%);
-}
-.day[data-end]:not([data-start]) {
-  background: linear-gradient(to left, transparent 50%, var(--accent-soft) 50%);
-}
-.calGrid td[aria-selected="false"] .day[data-start]:not([data-end]) {
-  background: none;
+.day[data-has-range][data-end]::before {
+  right: 50%;
+  background: var(--range);
 }
 .day[data-start] > span,
 .day[data-end]:not([data-preview]) > span {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .day[data-end][data-preview] > span {
-  box-shadow: inset 0 0 0 1px var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
 }
+/* Fokus: weißer + dunkler Ring, sichtbar auf hellen und dunklen Tagen */
 .day:focus-visible {
   outline: none;
 }
 .day:focus-visible > span {
-  outline: 2px solid var(--text);
-  outline-offset: 1px;
+  box-shadow: var(--focus-ring);
+  z-index: 2;
 }
 .calFooter {
   display: flex;
@@ -674,7 +729,8 @@
   margin: 0;
   padding: 0;
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 8px 18px;
   font-size: 13px;
   color: var(--muted);
 }
@@ -688,12 +744,26 @@
   height: 14px;
   border-radius: 50%;
 }
+.legendSwatch {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.legendSwatch[data-kind="free"] {
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--text);
+}
 .legendSwatch[data-kind="selected"] {
   background: var(--accent);
+  color: var(--on-accent);
 }
 .legendSwatch[data-kind="booked"] {
-  background: repeating-linear-gradient(-45deg, transparent 0 3px, rgba(116, 115, 110, 0.35) 3px 4px);
-  box-shadow: inset 0 0 0 1px var(--line);
+  background: repeating-linear-gradient(-45deg, transparent 0 3px, rgba(0, 0, 0, 0.12) 3px 4px);
+  color: #8c8c8c;
+  text-decoration: line-through;
 }
 .calStatus {
   font-size: 13px;
@@ -836,7 +906,7 @@
   overflow-wrap: anywhere;
 }
 .summaryRow dd[data-empty] {
-  color: #a9a59c;
+  color: var(--muted);
 }
 .summaryNote {
   margin-top: 20px;
@@ -848,6 +918,10 @@
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   margin-bottom: 32px;
+}
+.summaryCompact summary:hover .summaryCompactLine {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .summaryCompact summary {
   list-style: none;

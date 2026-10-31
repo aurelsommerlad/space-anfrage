@@ -90,6 +90,8 @@ export function Calendar(props: CalendarProps) {
   // Vorschau eines Zeitraums beim Überfahren/Fokussieren im Mehrtagesmodus.
   const previewEnd = multiDay && start && !end && hoverDate && hoverDate > start ? hoverDate : null;
   const rangeEnd = end ?? previewEnd;
+  const previewing = !end && !!previewEnd;
+  const hasRange = !!start && !!rangeEnd && rangeEnd !== start;
 
   function moveFocus(target: IsoDate) {
     if (target < `${minMonth}-01`) return;
@@ -213,7 +215,8 @@ export function Calendar(props: CalendarProps) {
                       data-start={isStart || undefined}
                       data-end={isEnd || undefined}
                       data-in-range={inRange || undefined}
-                      data-preview={(!end && (inRange || isEnd)) || undefined}
+                      data-preview={(previewing && (isStart || inRange || isEnd)) || undefined}
+                      data-has-range={(hasRange && (isStart || isEnd)) || undefined}
                       data-today={isToday || undefined}
                       onClick={() => {
                         setFocusDate(date);
@@ -226,7 +229,10 @@ export function Calendar(props: CalendarProps) {
                         setHoverDate(date);
                       }}
                     >
-                      <span aria-hidden="true">{Number(date.slice(8))}</span>
+                      <span aria-hidden="true">
+                        {Number(date.slice(8))}
+                        {st === "booked" ? <i className={styles.dayMark}>×</i> : null}
+                      </span>
                     </button>
                   </td>
                 );
@@ -239,12 +245,22 @@ export function Calendar(props: CalendarProps) {
       <div className={styles.calFooter}>
         <ul className={styles.legend} aria-label="Legende">
           <li>
-            <span className={styles.legendSwatch} data-kind="selected" aria-hidden="true" />
+            <span className={styles.legendSwatch} data-kind="free" aria-hidden="true">
+              8
+            </span>
+            Frei
+          </li>
+          <li>
+            <span className={styles.legendSwatch} data-kind="selected" aria-hidden="true">
+              8
+            </span>
             Deine Auswahl
           </li>
           <li>
-            <span className={styles.legendSwatch} data-kind="booked" aria-hidden="true" />
-            Belegt
+            <span className={styles.legendSwatch} data-kind="booked" aria-hidden="true">
+              8
+            </span>
+            × Belegt
           </li>
         </ul>
         {loadError ? (

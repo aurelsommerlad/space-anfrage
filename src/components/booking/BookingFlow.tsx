@@ -18,6 +18,7 @@ import { StepContact } from "./StepContact";
 import { StepDate } from "./StepDate";
 import { StepOccasion } from "./StepOccasion";
 import { SummaryAside, SummaryCompact } from "./Summary";
+import { useEmbedBridge } from "./useEmbedBridge";
 import styles from "./booking.module.css";
 
 export interface BookingFlowInitial {
@@ -96,7 +97,16 @@ function stepFromHash(): FlowStep | null {
   return null;
 }
 
-export function BookingFlow({ initial, embed }: { initial: BookingFlowInitial; embed: boolean }) {
+export function BookingFlow({
+  initial,
+  embed,
+  embedOrigins = [],
+}: {
+  initial: BookingFlowInitial;
+  embed: boolean;
+  /** Nur im Einbettungsmodus: erlaubte Origins der einbindenden Seite. */
+  embedOrigins?: string[];
+}) {
   const [draft, setDraft] = useState<BookingDraft>(EMPTY_DRAFT);
   const [step, setStep] = useState<FlowStep>(0);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -127,6 +137,7 @@ export function BookingFlow({ initial, embed }: { initial: BookingFlowInitial; e
   stepRef.current = step;
 
   const minDate = initial.earliestDate;
+  const bridge = useEmbedBridge(embed, embedOrigins, rootRef);
 
   // -------------------------------------------------------------------------
   // Validierung
@@ -240,23 +251,21 @@ export function BookingFlow({ initial, embed }: { initial: BookingFlowInitial; e
     focusHeadingNext.current = false;
     const root = rootRef.current;
     if (embed) {
-      window.parent?.postMessage({ type: "space-anfrage:scroll-top" }, "*");
+      bridge.reportHeight(true);
+      bridge.requestScrollTop();
     } else if (root && root.getBoundingClientRect().top < 0) {
       root.scrollIntoView({ block: "start" });
     }
     headingRef.current?.focus({ preventScroll: true });
   }, [step, embed]);
 
-  // Einbettungsmodus: Höhe an die einbettende Seite melden.
+  // Einbettungsmodus: Höhe nach Fehlermeldungen und Hinweisen sofort melden
+  // (Größenänderungen erfasst zusätzlich ein ResizeObserver).
   useEffect(() => {
-    if (!embed || window.parent === window) return;
-    const post = () =>
-      window.parent.postMessage({ type: "space-anfrage:height", height: document.documentElement.scrollHeight }, "*");
-    const ro = new ResizeObserver(post);
-    ro.observe(document.body);
-    post();
-    return () => ro.disconnect();
-  }, [embed]);
+    if (!embed) return;
+    const id = requestAnimationFrame(() => bridge.reportHeight());
+    return () => cancelAnimationFrame(id);
+  }, [embed, errors, notice, submitError, submitting, loadError, bridge.reportHeight]);
 
   // -------------------------------------------------------------------------
   // Verfügbarkeit
@@ -486,6 +495,9 @@ export function BookingFlow({ initial, embed }: { initial: BookingFlowInitial; e
 
   return (
     <main ref={rootRef} id="anfrage" className={styles.main} data-embed={embed || undefined}>
+      {embed ? (
+        <h1 className="visually-hidden">{VENUE.name} unverbindlich anfragen</h1>
+      ) : (
       <div className={styles.intro}>
         <p className={styles.eyebrow}>Unverbindliche Anfrage</p>
         <h1 className={styles.title}>{VENUE.name} anfragen</h1>
@@ -494,6 +506,7 @@ export function BookingFlow({ initial, embed }: { initial: BookingFlowInitial; e
           melden uns mit einer Rückmeldung zu deinem Termin.
         </p>
       </div>
+      )}
 
       {initial.demo ? (
         <p className={styles.demoBanner}>

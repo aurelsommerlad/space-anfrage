@@ -1,0 +1,55 @@
+<!--
+  SPACE im HØV – Anfragestrecke
+  Diesen gesamten Block in ein Elementor-Widget "HTML" einfügen.
+  Anpassen: APP_ORIGIN (ohne Schrägstrich am Ende) und ggf. SCROLL_OFFSET
+  (Höhe eines fixierten Website-Headers in Pixeln).
+  Die Website-Origin muss in der App unter EMBED_ALLOWED_ORIGINS eingetragen sein.
+-->
+<div class="space-anfrage-embed" style="width:100%;">
+  <iframe
+    id="space-anfrage-frame"
+    src="https://DEINE-APP.vercel.app/embed"
+    title="Anfrage SPACE im HØV"
+    style="display:block;width:100%;height:1100px;border:0;background:#ffffff;"
+    referrerpolicy="strict-origin-when-cross-origin"
+  ></iframe>
+</div>
+<script>
+  (function () {
+    var APP_ORIGIN = "https://DEINE-APP.vercel.app";
+    var SCROLL_OFFSET = 0;
+
+    var frame = document.getElementById("space-anfrage-frame");
+    if (!frame) return;
+    var connected = false;
+    var tries = 0;
+
+    function hello() {
+      if (connected || !frame.contentWindow) return;
+      frame.contentWindow.postMessage({ type: "space-anfrage:hello" }, APP_ORIGIN);
+      if (++tries < 20) setTimeout(hello, 500);
+    }
+    frame.addEventListener("load", function () {
+      connected = false;
+      tries = 0;
+      hello();
+    });
+
+    window.addEventListener("message", function (event) {
+      if (event.origin !== APP_ORIGIN || event.source !== frame.contentWindow) return;
+      var data = event.data || {};
+      if (data.type === "space-anfrage:height") {
+        var h = Number(data.height);
+        if (h > 0 && h < 20000) {
+          connected = true;
+          frame.style.height = Math.ceil(h) + "px";
+        }
+      } else if (data.type === "space-anfrage:scroll-top") {
+        var top = frame.getBoundingClientRect().top;
+        if (top < SCROLL_OFFSET || top > window.innerHeight * 0.5) {
+          window.scrollTo({ top: window.pageYOffset + top - SCROLL_OFFSET - 16, behavior: "smooth" });
+        }
+      }
+    });
+  })();
+</script>

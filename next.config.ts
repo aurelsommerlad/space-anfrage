@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
+import { parseAllowedOrigins } from "./src/lib/origins";
 
-const embedAncestors = process.env.EMBED_FRAME_ANCESTORS?.trim();
+// Gelesen beim Build. Nach Änderung auf Vercel neu deployen.
+const embedOrigins = parseAllowedOrigins(process.env.EMBED_ALLOWED_ORIGINS);
+
+const common = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+];
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -8,24 +15,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Standardseiten dürfen nicht fremd eingebettet werden.
+        // Normale Seiten dürfen nicht fremd eingebettet werden.
         source: "/((?!embed).*)",
-        headers: [
-          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        ],
+        headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'self'" }, ...common],
       },
       {
-        // Einbettungsmodus: erlaubte Seiten über EMBED_FRAME_ANCESTORS steuern.
+        // Einbettungsmodus: nur die ausdrücklich erlaubten Websites.
         source: "/embed",
         headers: [
-          {
-            key: "Content-Security-Policy",
-            value: `frame-ancestors 'self'${embedAncestors ? ` ${embedAncestors}` : ""}`,
-          },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Content-Security-Policy", value: ["frame-ancestors 'self'", ...embedOrigins].join(" ") },
+          ...common,
         ],
       },
     ];

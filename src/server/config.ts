@@ -1,4 +1,5 @@
 import "server-only";
+import { parseAllowedOrigins } from "@/lib/origins";
 
 export type DataSource = "demo" | "apaleo";
 
@@ -21,4 +22,9 @@ export function getApaleoConfig() {
     );
   }
   return { clientId, clientSecret, propertyId, unitGroupId };
+}
+
+/** Websites, die /embed einbinden und mit dem iframe kommunizieren dürfen. */
+export function getEmbedAllowedOrigins(): string[] {
+  return parseAllowedOrigins(process.env.EMBED_ALLOWED_ORIGINS);
 }

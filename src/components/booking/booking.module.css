@@ -87,70 +87,122 @@
 /* Fortschritt                                                         */
 /* ------------------------------------------------------------------ */
 
+/* Schrittanzeige: 1 Termin → 2 Anlass → 3 Kontakt & Anfrage */
 .stepper ol {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid var(--line);
+  gap: 8px;
 }
 .stepper li {
   position: relative;
+  min-width: 0;
+}
+/* Verbindungslinie zum nächsten Schritt */
+.stepper li + li::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  right: calc(100% + 8px - 12px);
+  width: calc(100% - 40px);
+  height: 1px;
+  background: var(--line);
+  display: none;
 }
 .stepper li > * {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 14px 0 0;
+  min-height: 44px;
+  padding: 6px 0;
   border: 0;
   background: none;
   text-align: left;
   color: var(--muted);
-  font-size: 14px;
-  cursor: default;
-}
-.stepper li::before {
-  content: "";
-  position: absolute;
-  top: -1px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: transparent;
-}
-.stepper li[data-current]::before {
-  background: var(--text);
-}
-.stepper li[data-done]::before {
-  background: var(--accent);
-}
-.stepper li[data-current] > * {
-  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.25;
 }
 .stepper button {
   cursor: pointer;
-}
-.stepper button:hover .stepName {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  border-radius: var(--radius);
 }
 .stepNum {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  font-size: 12px;
 }
 .stepName {
-  font-weight: 500;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* Aktueller Schritt */
+.stepper li[data-state="current"] .stepNum {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.stepper li[data-state="current"] .stepName {
+  color: var(--text);
+  font-weight: 600;
+}
+/* Erledigt: Häkchen, anklickbar */
+.stepper li[data-state="done"] .stepNum {
+  border-color: var(--text);
+  color: var(--text);
+}
+.stepper li[data-state="done"] .stepName {
+  color: var(--text);
+}
+@media (hover: hover) {
+  .stepper button:hover .stepName {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .stepper button:hover .stepNum {
+    background: var(--subtle);
+  }
+}
+/* Kommende Schritte: dezentes Grau */
+.stepper li[data-state="upcoming"] .stepNum {
+  border-color: var(--line);
+  color: var(--disabled);
+}
+.stepper li[data-state="upcoming"] .stepName {
+  color: var(--disabled);
+}
+.stepper {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+/* Schmal: Nummer über der Beschriftung, zentriert, Umbruch erlaubt */
+@media (max-width: 599px) {
+  .stepper li > * {
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+    font-size: 13px;
+  }
+  .stepper li + li::before {
+    display: block;
+    top: 21px;
+    right: calc(50% + 15px + 6px);
+    width: calc(100% - 30px - 12px + 8px);
+  }
 }
 
-/* ------------------------------------------------------------------ */
-/* Formular                                                            */
-/* ------------------------------------------------------------------ */
-
-.form {
-  margin-top: 48px;
-}
 .stepCount {
   font-size: 13px;
   color: var(--muted);
@@ -550,7 +602,42 @@
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   padding: 16px 0 18px;
+}
+/* Ein Monat (mobil) bzw. zwei Monate nebeneinander (Desktop) */
+.calMonths {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+.calendar[data-months="1"] .calMonths,
+.calendar[data-months="1"] .calFooter {
   max-width: 520px;
+}
+.calendar[data-months="2"] .calMonths {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.calendar[data-months="2"] .calMonth:first-of-type {
+  padding-right: 32px;
+}
+.calendar[data-months="2"] .calMonth + .calMonth {
+  border-left: 1px solid var(--line);
+  padding-left: 32px;
+}
+.calMonth {
+  min-width: 0;
+}
+.calNavPrev,
+.calNavNext {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+}
+.calNavPrev {
+  left: 0;
+}
+.calNavNext {
+  right: 0;
 }
 .calendar[data-invalid] {
   border-top-color: var(--error);
@@ -562,6 +649,11 @@
   margin-bottom: 12px;
 }
 .calTitle {
+  height: 44px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 16px;
   font-weight: 500;
 }
@@ -776,7 +868,6 @@
   justify-content: space-between;
   gap: 4px 16px;
   margin-top: 6px;
-  max-width: 520px;
 }
 .selection {
   font-size: 15px;
@@ -870,6 +961,12 @@
 .summarySticky {
   position: sticky;
   top: 32px;
+}
+/* Im iframe scrollt nur die Elternseite: Verschiebung per transform (siehe BookingFlow) */
+.main[data-embed] .summarySticky {
+  position: relative;
+  top: auto;
+  will-change: transform;
 }
 .summaryVenue {
   font-size: 20px;

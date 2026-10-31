@@ -56,8 +56,8 @@ function VenueLine() {
 /** Schmale Zusammenfassung rechts (Desktop). */
 export function SummaryAside({ draft }: { draft: BookingDraft }) {
   return (
-    <aside className={styles.summaryAside} aria-labelledby="summary-title">
-      <div className={styles.summarySticky}>
+    <aside className={styles.summaryAside} aria-labelledby="summary-title" data-sticky-aside>
+      <div className={styles.summarySticky} data-sticky-inner>
         <p className={styles.eyebrow} id="summary-title">
           Deine Anfrage
         </p>

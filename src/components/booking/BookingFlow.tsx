@@ -18,7 +18,7 @@ import { StepContact } from "./StepContact";
 import { StepDate } from "./StepDate";
 import { StepOccasion } from "./StepOccasion";
 import { SummaryAside, SummaryCompact } from "./Summary";
-import { useEmbedBridge } from "./useEmbedBridge";
+import { useEmbedBridge, type ParentViewport } from "./useEmbedBridge";
 import { GUESTS_PREFILL_ERROR, type PrefillResult } from "@/lib/prefill";
 import styles from "./booking.module.css";
 
@@ -36,7 +36,7 @@ export interface BookingFlowInitial {
 const STEPS = [
   { hash: "termin", title: "Termin", heading: "Wann möchtest du den Raum nutzen?" },
   { hash: "anlass", title: "Anlass", heading: "Worum geht es?" },
-  { hash: "kontakt", title: "Kontakt", heading: "Wie erreichen wir dich?" },
+  { hash: "kontakt", title: "Kontakt & Anfrage", heading: "Wie erreichen wir dich?" },
 ] as const;
 const DONE_HASH = "bestaetigung";
 type FlowStep = StepIndex | 3;
@@ -144,7 +144,37 @@ export function BookingFlow({
   stepRef.current = step;
 
   const minDate = initial.earliestDate;
-  const bridge = useEmbedBridge(embed, embedOrigins, rootRef);
+  // Eingebettet: Zusammenfassung anhand der Scrollposition der Elternseite mitführen
+  // (position: sticky greift im höhenangepassten iframe nicht, da es selbst nicht scrollt).
+  const viewportRef = useRef<ParentViewport | null>(null);
+  const applySticky = useCallback(() => {
+    const v = viewportRef.current;
+    const root = rootRef.current;
+    const aside = root?.querySelector<HTMLElement>("[data-sticky-aside]");
+    const inner = aside?.querySelector<HTMLElement>("[data-sticky-inner]");
+    if (!v || !aside || !inner) return;
+    const GAP = 24;
+    const asideRect = aside.getBoundingClientRect();
+    const visible = asideRect.width > 0 && getComputedStyle(aside).display !== "none";
+    const maxShift = aside.clientHeight - inner.offsetHeight;
+    const fitsViewport = inner.offsetHeight <= v.height - v.offset - GAP * 2;
+    if (!visible || maxShift <= 0 || !fitsViewport) {
+      inner.style.transform = "";
+      return;
+    }
+    const asideTop = asideRect.top + window.scrollY; // Position im iframe-Dokument
+    const wantedTop = v.offset + GAP - v.top; // Header-Unterkante + Abstand, umgerechnet ins iframe
+    const shift = Math.max(0, Math.min(maxShift, wantedTop - asideTop));
+    inner.style.transform = shift > 0 ? `translateY(${Math.round(shift)}px)` : "";
+  }, []);
+  const onViewport = useCallback(
+    (v: ParentViewport) => {
+      viewportRef.current = v;
+      applySticky();
+    },
+    [applySticky],
+  );
+  const bridge = useEmbedBridge(embed, embedOrigins, rootRef, onViewport);
 
   // -------------------------------------------------------------------------
   // Validierung
@@ -298,6 +328,22 @@ export function BookingFlow({
     }
     headingRef.current?.focus({ preventScroll: true });
   }, [step, embed]);
+
+  useEffect(() => {
+    if (!embed) return;
+    const root = rootRef.current;
+    if (!root || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => applySticky());
+    ro.observe(root);
+    window.addEventListener("resize", applySticky);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", applySticky);
+    };
+  }, [embed, applySticky]);
+  useEffect(() => {
+    if (embed) requestAnimationFrame(applySticky);
+  }, [embed, step, applySticky]);
 
   // Einbettungsmodus: Höhe nach Fehlermeldungen und Hinweisen sofort melden
   // (Größenänderungen erfasst zusätzlich ein ResizeObserver).
@@ -577,19 +623,32 @@ export function BookingFlow({
                 <ol>
                   {STEPS.map((s, i) => {
                     const isCurrent = i === step;
+                    const isDone = i < step;
                     const canJump = !isCurrent && i <= reachable;
+                    const state = isCurrent ? "current" : isDone ? "done" : "upcoming";
+                    const statusText = isCurrent ? "aktueller Schritt" : isDone ? "erledigt, bearbeiten" : "noch offen";
+                    const inner = (
+                      <>
+                        <span className={styles.stepNum} aria-hidden="true">
+                          {isDone ? <CheckIcon /> : i + 1}
+                        </span>
+                        <span className={styles.stepName}>
+                          {s.title}
+                          <span className="visually-hidden">
+                            {" "}
+                            (Schritt {i + 1} von {STEPS.length}, {statusText})
+                          </span>
+                        </span>
+                      </>
+                    );
                     return (
-                      <li key={s.hash} data-current={isCurrent || undefined} data-done={i < step || undefined}>
+                      <li key={s.hash} data-state={state}>
                         {canJump ? (
                           <button type="button" onClick={() => goTo(i as StepIndex)}>
-                            <span className={styles.stepNum}>{i + 1}</span>
-                            <span className={styles.stepName}>{s.title}</span>
+                            {inner}
                           </button>
                         ) : (
-                          <span aria-current={isCurrent ? "step" : undefined} aria-disabled={!isCurrent || undefined}>
-                            <span className={styles.stepNum}>{i + 1}</span>
-                            <span className={styles.stepName}>{s.title}</span>
-                          </span>
+                          <span aria-current={isCurrent ? "step" : undefined}>{inner}</span>
                         )}
                       </li>
                     );
@@ -705,5 +764,13 @@ export function BookingFlow({
         {announcement}
       </div>
     </main>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
+      <path d="M3 7.2 5.8 10 11 4.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
   );
 }

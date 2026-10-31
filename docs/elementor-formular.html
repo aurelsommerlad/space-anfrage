@@ -1,9 +1,13 @@
 <!--
-  SPACE im HØV – vollständiges Anfrageformular (Widget B)
+  SPACE im HØV – vollständiges Anfrageformular (Widget B), Version 2
   Einfügen in ein Elementor-Widget "HTML" auf der WordPress-Seite /space-anfrage/.
-  Übernimmt aus der Seitenadresse ausschließlich beginn, ende und personen
-  und gibt sie an das Formular weiter. Die Höhe passt sich automatisch an.
-  Voraussetzung: Die Website-Origin steht in der App unter EMBED_ALLOWED_ORIGINS.
+  - Übernimmt aus der Seitenadresse ausschließlich beginn, ende und personen
+    und gibt sie an das Formular weiter.
+  - Passt die Höhe automatisch an (keine internen Scrollbalken).
+  - Meldet dem Formular die Scrollposition, damit die Zusammenfassung auf
+    Desktop unter dem Website-Header sichtbar bleibt.
+  Kommunikation nur mit APP_ORIGIN; das Formular antwortet nur Websites,
+  die in der App unter EMBED_ALLOWED_ORIGINS eingetragen sind.
 -->
 <div class="space-anfrage-embed" style="width:100%;">
   <iframe
@@ -20,12 +24,13 @@
   (function () {
     /* ---- Einstellungen ---------------------------------------------- */
     var APP_ORIGIN = "https://space-anfrage.vercel.app"; // ohne Schrägstrich am Ende
-    var SCROLL_OFFSET = 0; // Höhe eines fixierten Website-Headers in Pixeln
+    var HEADER_OFFSET = "auto"; // Höhe des fixierten Website-Headers: "auto" oder Zahl in px
     /* ----------------------------------------------------------------- */
 
     var PARAMS = ["beginn", "ende", "personen"]; // nur diese werden weitergegeben
     var frame = document.getElementById("space-anfrage-frame");
-    if (!frame) return;
+    if (!frame || frame.getAttribute("data-ready")) return;
+    frame.setAttribute("data-ready", "2");
 
     var src = new URL("/embed", APP_ORIGIN);
     var here = new URLSearchParams(window.location.search);
@@ -33,6 +38,31 @@
       var value = here.get(name);
       if (value && value.length <= 20) src.searchParams.set(name, value);
     });
+
+    /* Fixierte Header oben erkennen (z. B. Elementor-Header) */
+    var candidates = [];
+    var lastScan = 0;
+    function scanFixed() {
+      lastScan = Date.now();
+      candidates = [];
+      var all = document.body.getElementsByTagName("*");
+      for (var i = 0; i < all.length; i++) {
+        var el = all[i];
+        if (el === frame || frame.contains(el) || el.contains(frame)) continue;
+        var pos = window.getComputedStyle(el).position;
+        if (pos === "fixed" || pos === "sticky") candidates.push(el);
+      }
+    }
+    function headerOffset() {
+      if (typeof HEADER_OFFSET === "number") return HEADER_OFFSET;
+      if (Date.now() - lastScan > 1500) scanFixed();
+      var vw = window.innerWidth, vh = window.innerHeight, max = 0;
+      for (var i = 0; i < candidates.length; i++) {
+        var r = candidates[i].getBoundingClientRect();
+        if (r.top <= 1 && r.bottom > 0 && r.height < vh * 0.4 && r.width >= vw * 0.5) max = Math.max(max, r.bottom);
+      }
+      return Math.round(max);
+    }
 
     var connected = false;
     var tries = 0;
@@ -47,6 +77,26 @@
       hello();
     });
 
+    /* Scrollposition an das Formular melden (für die mitlaufende Zusammenfassung) */
+    var pending = false;
+    function sendViewport() {
+      pending = false;
+      if (!connected || !frame.contentWindow) return;
+      frame.contentWindow.postMessage({
+        type: "space-anfrage:viewport",
+        top: Math.round(frame.getBoundingClientRect().top),
+        height: window.innerHeight,
+        offset: headerOffset()
+      }, APP_ORIGIN);
+    }
+    function scheduleViewport() {
+      if (pending) return;
+      pending = true;
+      window.requestAnimationFrame(sendViewport);
+    }
+    window.addEventListener("scroll", scheduleViewport, { passive: true });
+    window.addEventListener("resize", function () { scanFixed(); scheduleViewport(); });
+
     window.addEventListener("message", function (event) {
       if (event.origin !== APP_ORIGIN || event.source !== frame.contentWindow) return;
       var data = event.data || {};
@@ -55,11 +105,13 @@
         if (h > 0 && h < 20000) {
           connected = true;
           frame.style.height = Math.ceil(h) + "px";
+          scheduleViewport();
         }
       } else if (data.type === "space-anfrage:scroll-top") {
+        var offset = headerOffset();
         var top = frame.getBoundingClientRect().top;
-        if (top < SCROLL_OFFSET || top > window.innerHeight * 0.5) {
-          window.scrollTo({ top: window.pageYOffset + top - SCROLL_OFFSET - 16, behavior: "smooth" });
+        if (top < offset || top > window.innerHeight * 0.5) {
+          window.scrollTo({ top: window.pageYOffset + top - offset - 16, behavior: "smooth" });
         }
       }
     });

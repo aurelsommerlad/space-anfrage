@@ -8,8 +8,13 @@ import { useCallback, useEffect, useRef, type RefObject } from "react";
  * Nachrichten an die Elternseite (nur an eine ausdrücklich erlaubte Origin):
  *   { type: "space-anfrage:height", height: number }   – benötigte Höhe in px
  *   { type: "space-anfrage:scroll-top" }               – Schrittwechsel, Anfang zeigen
- * Nachricht von der Elternseite:
+ * Nachrichten von der Elternseite (nur von einer erlaubten Origin):
  *   { type: "space-anfrage:hello" }                     – meldet die Origin der Elternseite
+ *   { type: "space-anfrage:viewport", top, height, offset }
+ *       top    – Abstand des iframe-Oberrands zum Fensteroberrand (px, kann negativ sein)
+ *       height – Höhe des sichtbaren Fensters (px)
+ *       offset – Höhe eines fixierten Website-Headers (px)
+ *     Damit hält das Formular die Zusammenfassung beim Scrollen sichtbar.
  *
  * Die Origin der Elternseite wird aus window.location.ancestorOrigins bzw.
  * document.referrer ermittelt oder über "hello" bestätigt – in jedem Fall nur,
@@ -19,6 +24,20 @@ import { useCallback, useEffect, useRef, type RefObject } from "react";
 export const MSG_HEIGHT = "space-anfrage:height";
 export const MSG_SCROLL_TOP = "space-anfrage:scroll-top";
 export const MSG_HELLO = "space-anfrage:hello";
+export const MSG_VIEWPORT = "space-anfrage:viewport";
+
+export interface ParentViewport {
+  top: number;
+  height: number;
+  offset: number;
+}
+
+function parseViewport(data: Record<string, unknown>): ParentViewport | null {
+  const top = Number(data.top), height = Number(data.height), offset = Number(data.offset);
+  if (![top, height, offset].every(Number.isFinite)) return null;
+  if (Math.abs(top) > 1e6 || height <= 0 || height > 20000 || offset < 0 || offset > 2000) return null;
+  return { top, height, offset };
+}
 
 function detectParentOrigin(allowed: readonly string[]): string | null {
   const candidates: string[] = [];
@@ -36,7 +55,14 @@ function detectParentOrigin(allowed: readonly string[]): string | null {
   return candidates.find((c) => allowed.includes(c)) ?? null;
 }
 
-export function useEmbedBridge(enabled: boolean, allowedOrigins: readonly string[], rootRef: RefObject<HTMLElement | null>) {
+export function useEmbedBridge(
+  enabled: boolean,
+  allowedOrigins: readonly string[],
+  rootRef: RefObject<HTMLElement | null>,
+  onViewport?: (v: ParentViewport) => void,
+) {
+  const onViewportRef = useRef(onViewport);
+  onViewportRef.current = onViewport;
   const parentOrigin = useRef<string | null>(null);
   const lastHeight = useRef(0);
   const allowedKey = allowedOrigins.join(" ");
@@ -76,10 +102,16 @@ export function useEmbedBridge(enabled: boolean, allowedOrigins: readonly string
 
     function onMessage(e: MessageEvent) {
       if (e.source !== window.parent || !allowed.includes(e.origin)) return;
-      const data = e.data as { type?: unknown } | null;
-      if (!data || data.type !== MSG_HELLO) return;
-      parentOrigin.current = e.origin;
-      reportHeight(true);
+      const data = e.data as ({ type?: unknown } & Record<string, unknown>) | null;
+      if (!data || typeof data !== "object") return;
+      if (data.type === MSG_HELLO) {
+        parentOrigin.current = e.origin;
+        reportHeight(true);
+      } else if (data.type === MSG_VIEWPORT) {
+        parentOrigin.current = parentOrigin.current ?? e.origin;
+        const v = parseViewport(data);
+        if (v) onViewportRef.current?.(v);
+      }
     }
     window.addEventListener("message", onMessage);
 

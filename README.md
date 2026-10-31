@@ -63,6 +63,8 @@ Zwei Elementor-Widgets „HTML“:
    - **Ohne Parameter:** Der Ablauf beginnt regulär bei „Termin“.
 4. **Vorrang:** URL-Angaben überschreiben gespeicherte Eingaben zu Termin und Personenzahl.
 
+**Mitlaufende Zusammenfassung im iframe:** Das iframe passt seine Höhe an und scrollt selbst nicht, daher greift `position: sticky` dort nicht. Widget B meldet deshalb die Scrollposition der WordPress-Seite und die Höhe des fixierten Website-Headers (automatisch erkannt, `HEADER_OFFSET`) per `postMessage` (`space-anfrage:viewport`). Das Formular verschiebt die Zusammenfassung innerhalb ihrer Spalte, bis zum Ende des Formularbereichs. Ohne diese Meldungen bleibt sie einfach an ihrem Platz.
+
 **Höhenanpassung und Absicherung:**
 - **Höhe:** Das iframe meldet seine Höhe per `postMessage` bei Schrittwechseln, Fehlern und Größenänderungen.
 - **Senden:** Nur an Origins aus `EMBED_ALLOWED_ORIGINS`. Die Elternseite akzeptiert nur Nachrichten von `APP_ORIGIN` aus genau diesem iframe.

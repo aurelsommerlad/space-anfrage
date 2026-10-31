@@ -60,6 +60,12 @@ export interface BookingDraft {
   email: string;
   company: string;
   phone: string;
+  /**
+   * true, wenn der Termin über die Anfrageleiste (URL-Parameter) kam: Die
+   * Uhrzeit wird dann im Schritt "Anlass" abgefragt, damit der Ablauf direkt
+   * dort beginnen kann.
+   */
+  timeInOccasionStep: boolean;
 }
 
 export const EMPTY_DRAFT: BookingDraft = {
@@ -76,6 +82,7 @@ export const EMPTY_DRAFT: BookingDraft = {
   email: "",
   company: "",
   phone: "",
+  timeInOccasionStep: false,
 };
 
 export type FieldErrors = Partial<Record<keyof BookingDraft, string>>;
@@ -181,13 +188,35 @@ export const bookingRequestSchema = z.object({
 
 export type BookingRequest = z.infer<typeof bookingRequestSchema>;
 
-export function validateStep(step: StepIndex, draft: BookingDraft): FieldErrors {
-  const result = STEP_SCHEMAS[step].safeParse(draft);
+function collectErrors(schema: z.ZodType, draft: BookingDraft): FieldErrors {
+  const result = schema.safeParse(draft);
   if (result.success) return {};
   const errors: FieldErrors = {};
   for (const issue of result.error.issues) {
     const key = issue.path[0] as keyof BookingDraft | undefined;
     if (key && !errors[key]) errors[key] = issue.message;
+  }
+  return errors;
+}
+
+/** Schritt, in dem die Uhrzeit abgefragt wird. */
+export function timeStep(draft: BookingDraft): StepIndex {
+  return draft.timeInOccasionStep ? 1 : 0;
+}
+
+export function validateStep(step: StepIndex, draft: BookingDraft): FieldErrors {
+  const errors = collectErrors(STEP_SCHEMAS[step], draft);
+  if (draft.timeInOccasionStep) {
+    if (step === 0) {
+      delete errors.startTime;
+      delete errors.endTime;
+    } else if (step === 1 && draft.startDate) {
+      const t = collectErrors(dateStepSchema, draft);
+      const timeErrors: FieldErrors = {};
+      if (t.startTime) timeErrors.startTime = t.startTime;
+      if (t.endTime) timeErrors.endTime = t.endTime;
+      return { ...timeErrors, ...errors };
+    }
   }
   return errors;
 }

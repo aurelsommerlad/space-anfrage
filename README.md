@@ -40,24 +40,33 @@ Alle übrigen Variablen in `.env.example` (apaleo, E-Mail) werden im Demomodus n
 
 Eingaben bleiben beim Wechsel zwischen den Schritten erhalten, auch bei Browser-Zurück und Neuladen (`sessionStorage` des Tabs; wird nach dem Absenden gelöscht). Jeder Schritt hat einen eigenen URL-Hash (`#termin`, `#anlass`, `#kontakt`). Ein Direktaufruf eines späteren Schritts ohne gültige Vorangaben führt zum ersten unvollständigen Schritt.
 
-## Einbettung (WordPress/Elementor)
+## Einbindung in WordPress/Elementor
 
-`/embed` zeigt die Strecke ohne Header, Footer und Markenbereich, mit Schrittanzeige und Zusammenfassung und mit minimalen Außenabständen. Das iframe passt seine Höhe automatisch an.
+Zwei Elementor-Widgets „HTML“:
 
-1. **Erlaubte Website eintragen:** In Vercel `EMBED_ALLOWED_ORIGINS` setzen, z. B. `https://www.beispiel.de https://beispiel.de` (beide Schreibweisen, falls die Seite mit und ohne `www` erreichbar ist). Danach neu deployen.
-2. **Widget einfügen:** Den Inhalt von [`docs/elementor-widget.html`](docs/elementor-widget.html) in ein Elementor-Widget „HTML“ kopieren und `APP_ORIGIN` auf die Vercel-Domain der App setzen. Bei fixiertem Website-Header `SCROLL_OFFSET` auf dessen Höhe setzen.
+| Widget | Datei | Seite |
+| --- | --- | --- |
+| A – kompakte Anfrageleiste | [`docs/elementor-anfrageleiste.html`](docs/elementor-anfrageleiste.html) | SPACE-Präsentationsseite |
+| B – vollständiges Formular (iframe) | [`docs/elementor-formular.html`](docs/elementor-formular.html) | `/space-anfrage/` |
 
-**So funktioniert die Höhenanpassung:**
-- Das iframe meldet seine Inhaltshöhe per `postMessage` bei Schrittwechseln, Fehlermeldungen, Hinweisen und jeder Größenänderung (ResizeObserver).
-- Beim Schrittwechsel bittet es die Elternseite, zum Formularanfang zu scrollen.
+**Einstellungen:**
+- **Widget A:** `TARGET_URL`, die Adresse der Formularseite (Standard `/space-anfrage/`), steht an genau einer Stelle oben im Skript. Steht die Leiste auf mehreren Seiten, das Widget als globales Elementor-Widget speichern.
+- **Widget B:** `APP_ORIGIN` (Vercel-Adresse der App) und `SCROLL_OFFSET` (Höhe eines fixierten Website-Headers).
+- **Vercel:** `EMBED_ALLOWED_ORIGINS` auf die Origin der WordPress-Seite setzen und neu deployen.
 
-**Absicherung:**
-- **iframe-Seite:** Sie sendet nur an eine Origin aus `EMBED_ALLOWED_ORIGINS`. Diese Origin wird über `ancestorOrigins` bzw. den Referrer ermittelt oder per `hello` von der Elternseite bestätigt. Andere Nachrichten werden ignoriert.
-- **Elternseite:** Sie akzeptiert nur Nachrichten von `APP_ORIGIN`, die aus genau diesem iframe stammen.
-- **CSP:** `frame-ancestors` erlaubt `/embed` nur auf den eingetragenen Websites. Alle anderen Seiten der App sind nicht fremd einbettbar.
-- **Ohne Eintrag** in `EMBED_ALLOWED_ORIGINS` blockiert der Browser die Einbindung, und es findet keine Kommunikation statt.
+**Ablauf:**
+1. **Leiste:** Sie prüft Von, Bis (optional, für mehrere Tage) und Personen. Gültig sind Anfragen ab morgen, Berliner Zeit. Dann öffnet sie im selben Tab `/space-anfrage/?beginn=YYYY-MM-DD[&ende=YYYY-MM-DD]&personen=N`. Personenbezogene Daten kommen nie in die URL.
+2. **Widget B:** Es übernimmt ausschließlich `beginn`, `ende` und `personen` und gibt sie an `/embed` weiter. Andere Parameter werden verworfen.
+3. **Erneute Prüfung:** Die App prüft die Werte serverseitig, inklusive Belegung. Bis das Ergebnis da ist, zeigt sie „Dein Wunschtermin wird geprüft …“ und keinen Termin als verfügbar.
+   - **Frei:** Die App geht direkt zum Schritt „Anlass“ mit dem Hinweis „… ist laut Kalender frei“ und dem Link „Termin ändern“. Die Uhrzeit wird dann im Schritt „Anlass“ abgefragt.
+   - **Belegt oder ungültig:** Der Schritt „Termin“ zeigt eine verständliche Meldung. Monat und Ein-/Mehrtagesmodus sind vorausgewählt, die Personenzahl bleibt erhalten.
+   - **Ohne Parameter:** Der Ablauf beginnt regulär bei „Termin“.
+4. **Vorrang:** URL-Angaben überschreiben gespeicherte Eingaben zu Termin und Personenzahl.
 
-Nachrichten (iframe → Seite): `{ type: "space-anfrage:height", height }`, `{ type: "space-anfrage:scroll-top" }`. Nachricht (Seite → iframe): `{ type: "space-anfrage:hello" }`.
+**Höhenanpassung und Absicherung:**
+- **Höhe:** Das iframe meldet seine Höhe per `postMessage` bei Schrittwechseln, Fehlern und Größenänderungen.
+- **Senden:** Nur an Origins aus `EMBED_ALLOWED_ORIGINS`. Die Elternseite akzeptiert nur Nachrichten von `APP_ORIGIN` aus genau diesem iframe.
+- **CSP:** `frame-ancestors` beschränkt die Einbindung auf diese Websites.
 
 ## Architektur
 

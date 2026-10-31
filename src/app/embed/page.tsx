@@ -11,9 +11,13 @@ export const metadata: Metadata = {
 
 /**
  * Einbettungsmodus ohne Header, Footer und Markenbereich.
- * Einbindung und Höhenanpassung: siehe docs/einbindung-elementor.md
+ * Einbindung, Vorbelegung (beginn/ende/personen) und Höhenanpassung: siehe docs/elementor-formular.html
  */
-export default async function EmbedPage() {
-  const initial = await getInitialBookingData();
+export default async function EmbedPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const initial = await getInitialBookingData(await searchParams);
   return <BookingFlow initial={initial} embed embedOrigins={getEmbedAllowedOrigins()} />;
 }

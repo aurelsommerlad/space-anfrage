@@ -1,0 +1,258 @@
+<!--
+  SPACE im HØV – kompakte Anfrageleiste (Widget A)
+  Einfügen in ein Elementor-Widget "HTML" auf der SPACE-Präsentationsseite.
+  Öffnet nach Prüfung der Eingaben die Formularseite im selben Tab und
+  übergibt nur beginn, ende und personen (keine personenbezogenen Daten).
+  Zieladresse: TARGET_URL unten (eine Stelle). Tipp: Widget als globales
+  Elementor-Widget speichern, wenn die Leiste auf mehreren Seiten steht.
+-->
+<form class="sa-bar" id="sa-bar" action="/space-anfrage/" method="get" novalidate>
+  <div class="sa-bar__field">
+    <label class="sa-bar__label" for="sa-bar-beginn">Von</label>
+    <input class="sa-bar__input" id="sa-bar-beginn" name="beginn" type="date" required aria-describedby="sa-bar-beginn-error" />
+    <p class="sa-bar__error" id="sa-bar-beginn-error" aria-live="polite"></p>
+  </div>
+  <div class="sa-bar__field">
+    <label class="sa-bar__label" for="sa-bar-ende">Bis <span class="sa-bar__optional">(bei mehreren Tagen)</span></label>
+    <input class="sa-bar__input" id="sa-bar-ende" name="ende" type="date" aria-describedby="sa-bar-ende-error" />
+    <p class="sa-bar__error" id="sa-bar-ende-error" aria-live="polite"></p>
+  </div>
+  <div class="sa-bar__field sa-bar__field--guests">
+    <label class="sa-bar__label" for="sa-bar-personen">Personen</label>
+    <input class="sa-bar__input" id="sa-bar-personen" name="personen" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" required aria-describedby="sa-bar-personen-error" />
+    <p class="sa-bar__error" id="sa-bar-personen-error" aria-live="polite"></p>
+  </div>
+  <div class="sa-bar__action">
+    <button class="sa-bar__button" type="submit">Verfügbarkeit prüfen</button>
+  </div>
+</form>
+
+<style>
+  .sa-bar {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    width: 100%;
+    margin: 0;
+    padding: 16px;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    color: #171817;
+    font: inherit;
+    line-height: 1.4;
+    text-align: left;
+  }
+  .sa-bar *,
+  .sa-bar *::before,
+  .sa-bar *::after {
+    box-sizing: border-box;
+  }
+  .sa-bar .sa-bar__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+  }
+  .sa-bar .sa-bar__label {
+    display: block;
+    margin: 0;
+    padding: 0;
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 500;
+    color: #171817;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sa-bar .sa-bar__optional {
+    font-weight: 400;
+    color: #666666;
+  }
+  .sa-bar .sa-bar__input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 48px;
+    margin: 0;
+    padding: 0 12px;
+    background: #ffffff;
+    border: 1px solid #d4d4d4;
+    border-radius: 2px;
+    box-shadow: none;
+    color: #171817;
+    font: inherit;
+    font-size: 16px;
+    line-height: 46px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .sa-bar .sa-bar__input::-webkit-date-and-time-value {
+    text-align: left;
+  }
+  .sa-bar .sa-bar__input:hover {
+    border-color: #a8a8a8;
+  }
+  .sa-bar .sa-bar__input:focus,
+  .sa-bar .sa-bar__input:focus-visible {
+    outline: 2px solid #1e1e1e;
+    outline-offset: 2px;
+    border-color: #1e1e1e;
+  }
+  .sa-bar .sa-bar__input[aria-invalid="true"] {
+    border-color: #b42318;
+  }
+  .sa-bar .sa-bar__error {
+    margin: 0;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1.35;
+    color: #b42318;
+  }
+  .sa-bar .sa-bar__error:empty {
+    display: none;
+  }
+  .sa-bar .sa-bar__button {
+    display: block;
+    width: 100%;
+    height: 48px;
+    margin: 0;
+    padding: 0 24px;
+    background: #1e1e1e;
+    border: 1px solid #1e1e1e;
+    border-radius: 2px;
+    box-shadow: none;
+    color: #ffffff;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 46px;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .sa-bar .sa-bar__button:hover {
+    background: #3a3a3a;
+    border-color: #3a3a3a;
+    color: #ffffff;
+  }
+  .sa-bar .sa-bar__button:focus-visible {
+    outline: 2px solid #1e1e1e;
+    outline-offset: 2px;
+  }
+  @media (min-width: 768px) {
+    .sa-bar {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 120px auto;
+      align-items: start;
+      gap: 12px;
+      padding: 20px;
+    }
+    .sa-bar .sa-bar__action {
+      padding-top: 26px; /* Höhe der Beschriftung + Abstand */
+    }
+    .sa-bar .sa-bar__button {
+      width: auto;
+    }
+  }
+</style>
+
+<script>
+  (function () {
+    /* ---- Einstellung: Adresse der WordPress-Formularseite ------------ */
+    var TARGET_URL = "/space-anfrage/";
+    /* ----------------------------------------------------------------- */
+
+    var form = document.getElementById("sa-bar");
+    if (!form) return;
+    form.setAttribute("action", TARGET_URL);
+    var startEl = document.getElementById("sa-bar-beginn");
+    var endEl = document.getElementById("sa-bar-ende");
+    var guestsEl = document.getElementById("sa-bar-personen");
+
+    // Datum in Europe/Berlin – unabhängig von der Zeitzone des Geräts.
+    function todayBerlin() {
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit"
+      }).format(new Date());
+    }
+    function addDays(iso, n) {
+      var p = iso.split("-");
+      return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n)).toISOString().slice(0, 10);
+    }
+    function isDate(v) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+      var p = v.split("-");
+      var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+      return d.toISOString().slice(0, 10) === v;
+    }
+    // Fallback für Browser ohne Datumsfeld: TT.MM.JJJJ akzeptieren.
+    function normalize(v) {
+      v = (v || "").trim();
+      var m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(v);
+      if (m) v = m[3] + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[1]).slice(-2);
+      return v;
+    }
+    function formatDe(iso) {
+      var p = iso.split("-");
+      return new Intl.DateTimeFormat("de-DE", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+        .format(new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])));
+    }
+
+    var earliest = addDays(todayBerlin(), 1); // Anfragen ab morgen
+    startEl.min = earliest;
+    endEl.min = earliest;
+    startEl.addEventListener("change", function () {
+      var s = normalize(startEl.value);
+      if (isDate(s)) endEl.min = s;
+      clearError(startEl);
+    });
+    endEl.addEventListener("change", function () { clearError(endEl); });
+    guestsEl.addEventListener("input", function () {
+      guestsEl.value = guestsEl.value.replace(/[^\d]/g, "").slice(0, 4);
+      clearError(guestsEl);
+    });
+
+    function setError(el, msg) {
+      el.setAttribute("aria-invalid", "true");
+      document.getElementById(el.id + "-error").textContent = msg;
+    }
+    function clearError(el) {
+      el.removeAttribute("aria-invalid");
+      document.getElementById(el.id + "-error").textContent = "";
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      [startEl, endEl, guestsEl].forEach(clearError);
+      var start = normalize(startEl.value);
+      var end = normalize(endEl.value);
+      var guests = guestsEl.value.trim();
+      var invalid = [];
+
+      if (!start) { setError(startEl, "Bitte wähle einen Tag."); invalid.push(startEl); }
+      else if (!isDate(start)) { setError(startEl, "Bitte gib ein gültiges Datum ein."); invalid.push(startEl); }
+      else if (start < earliest) { setError(startEl, "Anfragen sind ab " + formatDe(earliest) + " möglich."); invalid.push(startEl); }
+
+      if (end) {
+        if (!isDate(end)) { setError(endEl, "Bitte gib ein gültiges Datum ein."); invalid.push(endEl); }
+        else if (isDate(start) && end < start) { setError(endEl, "Das Ende darf nicht vor dem Beginn liegen."); invalid.push(endEl); }
+      }
+
+      if (!guests) { setError(guestsEl, "Bitte gib die Personenzahl an."); invalid.push(guestsEl); }
+      else if (!/^\d{1,4}$/.test(guests) || Number(guests) < 1) { setError(guestsEl, "Bitte gib eine ganze Zahl ab 1 an."); invalid.push(guestsEl); }
+
+      if (invalid.length) { invalid[0].focus(); return; }
+
+      var url = new URL(TARGET_URL, window.location.href);
+      url.search = "";
+      url.hash = "";
+      url.searchParams.set("beginn", start);
+      if (end && end !== start) url.searchParams.set("ende", end);
+      url.searchParams.set("personen", String(Number(guests)));
+      window.location.assign(url.toString());
+    });
+  })();
+</script>

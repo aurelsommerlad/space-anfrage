@@ -2,6 +2,7 @@
 
 import { MESSAGE_MAX_LENGTH, OCCASIONS, type BookingDraft, type FieldErrors } from "@/lib/booking";
 import { describedBy, Field, FieldError, fieldId } from "./fields";
+import { TimeFields } from "./TimeFields";
 import styles from "./booking.module.css";
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
 export function StepOccasion({ draft, update, errors }: Props) {
   return (
     <>
+      {draft.timeInOccasionStep ? <TimeFields draft={draft} update={update} errors={errors} /> : null}
+
       <fieldset
         className={styles.fieldset}
         aria-describedby={errors.occasion ? "f-occasion-error" : undefined}

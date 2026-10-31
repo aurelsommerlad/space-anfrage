@@ -10,7 +10,7 @@ import {
   type FieldErrors,
   type StepIndex,
 } from "@/lib/booking";
-import { addMonths, eachDay, formatDateShort, monthOf, type IsoDate, type IsoMonth } from "@/lib/dates";
+import { addMonths, eachDay, formatDateShort, formatRange, monthOf, type IsoDate, type IsoMonth } from "@/lib/dates";
 import type { AvailabilityResponse, SubmitErrorResponse, SubmitResponse } from "@/lib/availability";
 import { Confirmation } from "./Confirmation";
 import { fieldId } from "./fields";
@@ -19,6 +19,7 @@ import { StepDate } from "./StepDate";
 import { StepOccasion } from "./StepOccasion";
 import { SummaryAside, SummaryCompact } from "./Summary";
 import { useEmbedBridge } from "./useEmbedBridge";
+import { GUESTS_PREFILL_ERROR, type PrefillResult } from "@/lib/prefill";
 import styles from "./booking.module.css";
 
 export interface BookingFlowInitial {
@@ -28,6 +29,8 @@ export interface BookingFlowInitial {
   bookedDates: IsoDate[];
   loadedMonths: IsoMonth[];
   demo: boolean;
+  /** Vorbelegung aus URL-Parametern, serverseitig geprüft (inkl. Belegung). */
+  prefill?: PrefillResult | null;
 }
 
 const STEPS = [
@@ -115,6 +118,10 @@ export function BookingFlow({
   const [returnToReview, setReturnToReview] = useState(false);
   const [restored, setRestored] = useState(false);
   const [honeypot, setHoneypot] = useState("");
+  /** Meldung zur Vorbelegung (belegt/ungültig) – oben im Schritt "Termin". */
+  const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
+  /** Bestätigter, freier Termin aus der Anfrageleiste – Hinweis im Schritt "Anlass". */
+  const [prefillOk, setPrefillOk] = useState<{ start: IsoDate; end: IsoDate } | null>(null);
 
   const [month, setMonth] = useState<IsoMonth>(initial.initialMonth);
   const [booked, setBooked] = useState<Set<IsoDate>>(() => new Set(initial.bookedDates));
@@ -199,21 +206,54 @@ export function BookingFlow({
     setStep(target);
   }, []);
 
-  // Entwurf wiederherstellen und Schritt aus URL übernehmen.
+  // Entwurf wiederherstellen; URL-Vorbelegung hat Vorrang vor gespeicherten Eingaben.
   useEffect(() => {
     const stored = readStoredDraft();
-    const d = stored ?? EMPTY_DRAFT;
+    const prefill = initial.prefill;
+
+    if (prefill) {
+      const d: BookingDraft = { ...(stored ?? EMPTY_DRAFT) };
+      if (prefill.guestsGiven) d.guests = prefill.guests;
+      let target: StepIndex = 0;
+      if (prefill.startDate && prefill.endDate) {
+        d.startDate = prefill.startDate;
+        d.multiDay = prefill.endDate !== prefill.startDate;
+        d.endDate = d.multiDay ? prefill.endDate : null;
+        d.timeInOccasionStep = true;
+        target = 1;
+        setPrefillOk({ start: prefill.startDate, end: prefill.endDate });
+        setMonth(monthOf(prefill.startDate));
+      } else if (prefill.dateIssue) {
+        d.startDate = null;
+        d.endDate = null;
+        d.multiDay = prefill.requestedMultiDay;
+        d.timeInOccasionStep = false;
+        setPrefillNotice(prefill.message);
+        setAnnouncement(prefill.message ?? "");
+      }
+      setDraft(d);
+      draftRef.current = d;
+      setStep(target);
+      if (target === 1 && prefill.guestsIssue) setErrors({ guests: GUESTS_PREFILL_ERROR });
+      else if (target === 0 && prefill.guestsIssue && !prefill.dateIssue) setPrefillNotice(GUESTS_PREFILL_ERROR);
+      window.history.replaceState(null, "", `#${STEPS[target].hash}`);
+      setRestored(true);
+      return;
+    }
+
+    // Regulärer Einstieg: Uhrzeit wieder im Schritt "Termin".
+    const d: BookingDraft = stored ? { ...stored, timeInOccasionStep: false } : EMPTY_DRAFT;
     if (stored) {
-      setDraft(stored);
-      draftRef.current = stored;
-      if (stored.startDate && monthOf(stored.startDate) >= monthOf(minDate)) setMonth(monthOf(stored.startDate));
+      setDraft(d);
+      draftRef.current = d;
+      if (d.startDate && monthOf(d.startDate) >= monthOf(minDate)) setMonth(monthOf(d.startDate));
     }
     const fromHash = stepFromHash();
     if (fromHash !== null && fromHash !== 0) {
       const allowed = Math.min(fromHash, maxReachable(d)) as StepIndex;
       setStep(allowed);
       window.history.replaceState(null, "", `#${STEPS[allowed].hash}`);
-    } else if (window.location.hash === `#${DONE_HASH}`) {
+    } else if (window.location.hash !== `#${STEPS[0].hash}`) {
       window.history.replaceState(null, "", `#${STEPS[0].hash}`);
     }
     setRestored(true);
@@ -321,6 +361,7 @@ export function BookingFlow({
 
   function onDayClick(date: IsoDate) {
     setSubmitError(null);
+    setPrefillNotice(null);
     if (date < minDate) {
       setNotice(`Dieser Tag ist nicht anfragbar. Anfragen sind ab ${formatDateShort(minDate)} möglich.`);
       return;
@@ -368,6 +409,7 @@ export function BookingFlow({
 
   function onModeChange(multiDay: boolean) {
     setNotice(null);
+    setPrefillNotice(null);
     update({ multiDay, endDate: null });
   }
 
@@ -455,7 +497,11 @@ export function BookingFlow({
       if (err?.fieldErrors) {
         const fe = err.fieldErrors as FieldErrors;
         const steps = Object.keys(fe)
-          .map((k) => STEP_OF_FIELD[k as keyof BookingDraft])
+          .map((k) =>
+            (k === "startTime" || k === "endTime") && draft.timeInOccasionStep
+              ? 1
+              : STEP_OF_FIELD[k as keyof BookingDraft],
+          )
           .filter((s): s is StepIndex => s !== undefined);
         const target = steps.length ? (Math.min(...steps) as StepIndex) : 2;
         if (target !== 2) goTo(target);
@@ -471,6 +517,8 @@ export function BookingFlow({
 
   function restart() {
     setDraft(EMPTY_DRAFT);
+    setPrefillOk(null);
+    setPrefillNotice(null);
     setResult(null);
     setHoneypot("");
     setReturnToReview(false);
@@ -516,7 +564,12 @@ export function BookingFlow({
 
       <div className={styles.layout} data-done={step === 3 || undefined}>
         <div className={styles.formCol}>
-          {current ? (
+          {initial.prefill && !restored ? (
+            <p className={styles.checking} role="status">
+              <span className={styles.spinner} aria-hidden="true" />
+              Dein Wunschtermin wird geprüft …
+            </p>
+          ) : current ? (
             <>
               <SummaryCompact draft={draft} />
 
@@ -553,6 +606,31 @@ export function BookingFlow({
                 </h2>
 
                 <div className={styles.stepBody}>
+                  {step === 0 && prefillNotice ? (
+                    <p className={styles.prefillNotice} role="alert">
+                      {prefillNotice}
+                    </p>
+                  ) : null}
+                  {step === 1 &&
+                  prefillOk &&
+                  draft.startDate === prefillOk.start &&
+                  (draft.endDate ?? draft.startDate) === prefillOk.end ? (
+                    <div className={styles.prefillOk}>
+                      <p>
+                        <span className={styles.okMark} aria-hidden="true">
+                          ✓
+                        </span>
+                        <span>
+                          <strong>{formatRange(prefillOk.start, prefillOk.end === prefillOk.start ? null : prefillOk.end)}</strong>{" "}
+                          ist laut Kalender{initial.demo ? " (Beispieldaten)" : ""} frei. Erst unsere Bestätigung reserviert den
+                          Termin.
+                        </span>
+                      </p>
+                      <button type="button" className={styles.linkButton} onClick={() => goTo(0)}>
+                        Termin ändern
+                      </button>
+                    </div>
+                  ) : null}
                   {step === 0 ? (
                     <StepDate
                       draft={draft}
@@ -620,7 +698,7 @@ export function BookingFlow({
           ) : null}
         </div>
 
-        {current ? <SummaryAside draft={draft} /> : null}
+        {current && !(initial.prefill && !restored) ? <SummaryAside draft={draft} /> : null}
       </div>
 
       <div className="visually-hidden" aria-live="assertive" role="status">

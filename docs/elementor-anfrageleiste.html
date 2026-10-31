@@ -1,5 +1,5 @@
 <!--
-  SPACE im HØV – kompakte Anfrageleiste (Widget A), Version 8
+  SPACE im HØV – kompakte Anfrageleiste (Widget A), Version 9
   Einfügen in ein Elementor-Widget "HTML". Darf mehrfach auf einer Seite stehen.
   Die Leiste ist reines HTML/CSS und immer sichtbar. Der Kalender kommt als
   Datei von der App (letzte Zeile) – WordPress kann den Code so nicht verändern.
@@ -18,9 +18,7 @@
       <span class="sa-leiste__sr">Personen</span>
       <input class="sa-leiste__input" name="personen" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="Personen">
     </label>
-    <button type="submit" class="sa-leiste__submit" aria-label="Verfügbarkeit prüfen">
-      <svg class="sa-leiste__arrow" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><path d="M4 11h13.5M12 5.5l5.5 5.5-5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-    </button>
+    <button type="submit" class="sa-leiste__submit">Unverbindlich anfragen</button>
   </div>
   <p class="sa-leiste__error" data-sa-error="date" aria-live="polite"></p>
   <p class="sa-leiste__error" data-sa-error="guests" aria-live="polite"></p>
@@ -65,12 +63,37 @@
     line-height: 1.4 !important;
     text-align: left !important;
   }
+  /* Aufteilung nach der verfügbaren Breite der Leiste (nicht des Fensters),
+     z. B. im schmalen Elementor-Popup:
+     - ab 570 px: Datum | Personen | Button in einer Zeile
+     - darunter:  Datum über die volle Breite, darunter Personen | Button
+     - unter 334 px: Button in eigener Zeile über die volle Breite
+     Der Button ist – außer im letzten Fall – so breit wie sein Text. */
+  .sa-leiste.sa-leiste.sa-leiste {
+    container: sa-leiste / inline-size;
+  }
   .sa-leiste.sa-leiste.sa-leiste .sa-leiste__row {
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) clamp(120px, 24%, 200px) 60px !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
     gap: 10px !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date {
+    grid-column: 1 / -1 !important;
+  }
+  @container sa-leiste (min-width: 570px) {
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__row {
+      grid-template-columns: minmax(0, 1fr) clamp(120px, 22%, 180px) auto !important;
+    }
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date {
+      grid-column: auto !important;
+    }
+  }
+  @container sa-leiste (max-width: 333px) {
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__row {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
   }
   .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date,
   .sa-leiste.sa-leiste.sa-leiste .sa-leiste__input {
@@ -164,8 +187,7 @@
   .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date[data-filled] .sa-leiste__placeholder {
     display: none !important;
   }
-  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__icon,
-  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__arrow {
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__icon {
     display: block !important;
     flex: none !important;
     max-width: none !important;
@@ -176,10 +198,6 @@
     height: 20px !important;
     margin-left: auto !important;
     color: #1e1e1e !important;
-  }
-  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__arrow {
-    width: 22px !important;
-    height: 22px !important;
   }
   .sa-leiste.sa-leiste.sa-leiste .sa-leiste__guests {
     position: relative !important;
@@ -207,18 +225,27 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 60px !important;
+    width: 100% !important;
     min-width: 0 !important;
+    max-width: none !important;
     height: 60px !important;
     min-height: 0 !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 0 24px !important;
     background: #1e1e1e !important;
     border: 1px solid #1e1e1e !important;
     border-radius: 2px !important;
     box-shadow: none !important;
     outline: none !important;
     color: #ffffff !important;
+    font-family: inherit !important;
+    font-size: 16px !important;
+    font-style: normal !important;
+    font-weight: 400 !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
     cursor: pointer !important;
   }
   .sa-leiste.sa-leiste.sa-leiste .sa-leiste__submit:focus {
@@ -243,14 +270,6 @@
   }
   .sa-leiste.sa-leiste.sa-leiste .sa-leiste__error:empty {
     display: none !important;
-  }
-  @media (max-width: 599px) {
-    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__row {
-      grid-template-columns: minmax(0, 1fr) 60px !important;
-    }
-    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date {
-      grid-column: 1 / -1 !important;
-    }
   }
 </style>
 

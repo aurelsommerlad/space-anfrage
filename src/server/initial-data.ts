@@ -2,8 +2,8 @@ import "server-only";
 import { addDays, addMonths, firstOfMonth, lastOfMonth, monthOf, todayInVenue } from "@/lib/dates";
 import { MAX_MONTHS_AHEAD, MIN_LEAD_DAYS } from "@/lib/booking";
 import { applyBooked, checkPrefill, readPrefillParams, type PrefillResult } from "@/lib/prefill";
-import { getBookingBackend } from "./booking-backend";
-import { getDataSource } from "./config";
+import { getBookedDates } from "./booking-backend";
+import { getModeState, getPrivacyUrl } from "./config";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -16,7 +16,7 @@ export async function getInitialBookingData(searchParams: SearchParams = {}) {
   const today = todayInVenue();
   const earliest = addDays(today, MIN_LEAD_DAYS);
   const latest = lastOfMonth(addMonths(monthOf(today), MAX_MONTHS_AHEAD));
-  const backend = getBookingBackend();
+  const state = getModeState();
 
   let prefill: PrefillResult | null = null;
   const params = readPrefillParams(searchParams);
@@ -25,7 +25,7 @@ export async function getInitialBookingData(searchParams: SearchParams = {}) {
     if (prefill.startDate && prefill.endDate) {
       let booked: string[] | null = null;
       try {
-        booked = await backend.getBookedDates(prefill.startDate, prefill.endDate);
+        booked = await getBookedDates(prefill.startDate, prefill.endDate, { state });
       } catch (err) {
         console.error("[prefill]", err);
       }
@@ -38,7 +38,7 @@ export async function getInitialBookingData(searchParams: SearchParams = {}) {
   let bookedDates: string[] = [];
   let loadedMonths: string[] = [];
   try {
-    bookedDates = await backend.getBookedDates(firstOfMonth(month), lastOfMonth(addMonths(month, 1)));
+    bookedDates = await getBookedDates(firstOfMonth(month), lastOfMonth(addMonths(month, 1)), { state });
     loadedMonths = [month, addMonths(month, 1)];
   } catch (err) {
     console.error("[initial-data]", err);
@@ -49,7 +49,10 @@ export async function getInitialBookingData(searchParams: SearchParams = {}) {
     initialMonth: month,
     bookedDates,
     loadedMonths,
-    demo: getDataSource() === "demo",
+    demo: state.mode === "demo",
+    /** Live gewählt, aber unvollständig konfiguriert: Anfragen gesperrt. */
+    unavailable: state.mode === "misconfigured",
+    privacyUrl: getPrivacyUrl(),
     prefill,
   };
 }

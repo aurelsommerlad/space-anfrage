@@ -29,6 +29,10 @@ export interface BookingFlowInitial {
   bookedDates: IsoDate[];
   loadedMonths: IsoMonth[];
   demo: boolean;
+  /** Live gewählt, aber unvollständig konfiguriert: keine Anfragen möglich. */
+  unavailable?: boolean;
+  /** Datenschutzerklärung der Website */
+  privacyUrl?: string;
   /** Vorbelegung aus URL-Parametern, serverseitig geprüft (inkl. Belegung). */
   prefill?: PrefillResult | null;
 }
@@ -42,6 +46,30 @@ const DONE_HASH = "bestaetigung";
 type FlowStep = StepIndex | 3;
 
 const STORAGE_KEY = "space-anfrage:entwurf:v1";
+const SUBMIT_KEY = "space-anfrage:anfrage-schluessel:v1";
+
+/** Ein Schlüssel je Anfrage: wiederholtes Senden (Doppelklick, Netzfehler) wird erkannt. */
+function getSubmitKey(): string {
+  try {
+    const existing = window.sessionStorage.getItem(SUBMIT_KEY);
+    if (existing) return existing;
+  } catch {}
+  const key =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
+          (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16),
+        );
+  try {
+    window.sessionStorage.setItem(SUBMIT_KEY, key);
+  } catch {}
+  return key;
+}
+function clearSubmitKey() {
+  try {
+    window.sessionStorage.removeItem(SUBMIT_KEY);
+  } catch {}
+}
 
 /** Reihenfolge für "erstes fehlerhaftes Feld fokussieren". */
 const FIELD_ORDER: (keyof BookingDraft)[] = [
@@ -144,6 +172,7 @@ export function BookingFlow({
   stepRef.current = step;
 
   const minDate = initial.earliestDate;
+  const startedAt = useRef(Date.now());
   // Eingebettet: Zusammenfassung anhand der Scrollposition der Elternseite mitführen
   // (position: sticky greift im höhenangepassten iframe nicht, da es selbst nicht scrollt).
   const viewportRef = useRef<ParentViewport | null>(null);
@@ -524,12 +553,13 @@ export function BookingFlow({
       const res = await fetch("/api/anfrage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...draftToRequest(draft), website: honeypot }),
+        body: JSON.stringify({ ...draftToRequest(draft), website: honeypot, idempotencyKey: getSubmitKey(), startedAt: startedAt.current }),
       });
       const data = (await res.json().catch(() => null)) as SubmitResponse | SubmitErrorResponse | null;
       if (res.ok && data?.ok) {
         setResult(data);
         writeStoredDraft(null);
+        clearSubmitKey();
         goTo(3, "replace");
         return;
       }
@@ -569,6 +599,7 @@ export function BookingFlow({
     setHoneypot("");
     setReturnToReview(false);
     writeStoredDraft(null);
+    clearSubmitKey();
     setMonth(monthOf(minDate));
     goTo(0, "replace");
   }
@@ -610,7 +641,12 @@ export function BookingFlow({
 
       <div className={styles.layout} data-done={step === 3 || undefined}>
         <div className={styles.formCol}>
-          {initial.prefill && !restored ? (
+          {initial.unavailable ? (
+            <p className={styles.prefillNotice} role="alert">
+              Online-Anfragen sind gerade nicht möglich. Bitte schreib uns direkt an{" "}
+              <a href="mailto:stay@unique-places.com">stay@unique-places.com</a>.
+            </p>
+          ) : initial.prefill && !restored ? (
             <p className={styles.checking} role="status">
               <span className={styles.spinner} aria-hidden="true" />
               Dein Wunschtermin wird geprüft …
@@ -720,6 +756,17 @@ export function BookingFlow({
                     />
                   )}
                 </div>
+
+                {step === 2 ? (
+                  <p className={styles.privacy}>
+                    Wir verwenden deine Angaben ausschließlich, um deine Anfrage zu bearbeiten und dir zu antworten. Mehr
+                    dazu in unserer{" "}
+                    <a href={initial.privacyUrl ?? "https://unique-places.com/datenschutz"} target="_blank" rel="noopener noreferrer">
+                      Datenschutzerklärung
+                    </a>
+                    .
+                  </p>
+                ) : null}
 
                 {step === 2 && initial.demo ? (
                   <p className={styles.demoInline}>

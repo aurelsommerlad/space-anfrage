@@ -1171,3 +1171,16 @@
   font-weight: var(--fw-medium);
   flex: none;
 }
+
+.privacy {
+  margin-top: 32px;
+  font-size: var(--small-size);
+  font-weight: var(--text-weight);
+  color: var(--muted);
+  max-width: 640px;
+}
+.privacy a {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

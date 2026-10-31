@@ -2,13 +2,18 @@
 
 Mobiloptimierte Anfragestrecke für den Veranstaltungsraum **SPACE im HØV** in Altusried (63 m², mit großer Küche), betrieben von **UNIQUE PLACES**.
 
-> **Demomodus:** Belegte Tage sind Beispieldaten. Es gibt noch keine apaleo-Anbindung, keinen E-Mail-Versand und keine Reservierung. Die Oberfläche weist im Demomodus ausdrücklich darauf hin.
+Zwei Betriebsarten (`BOOKING_MODE`):
+
+- **demo:** Belegte Tage sind Beispieldaten. Nichts wird gespeichert, versendet oder reserviert. Die Oberfläche weist ausdrücklich darauf hin.
+- **live:** Verfügbarkeit aus apaleo (nur lesend). Anfragen werden mit Referenznummer in Postgres gespeichert. Es gehen eine interne Benachrichtigung und eine Eingangsbestätigung per E-Mail (Resend) raus. Eine Reservierung entsteht nicht.
+
+Ist `live` gesetzt, aber unvollständig konfiguriert, ist die Strecke gesperrt (Hinweis auf stay@unique-places.com). Es gibt **keinen** stillen Rückfall auf Demo.
 
 ## Schnellstart
 
 ```bash
 npm install
-cp .env.example .env.local   # optional, Standard ist BOOKING_DATA_SOURCE=demo
+cp .env.example .env.local   # optional, Standard ist BOOKING_MODE=demo
 npm run dev                  # http://localhost:3000
 ```
 
@@ -18,8 +23,9 @@ npm run dev                  # http://localhost:3000
 | `npm run build`     | Produktions-Build (wie auf Vercel) |
 | `npm run typecheck` | TypeScript-Prüfung                 |
 | `npm test`          | Tests der Datumslogik (Node ≥ 22)  |
+| `tests/abnahme/`    | Abnahmetests für den Live-Modus (siehe unten) |
 
-Stack: Next.js 16 (App Router), React 19, TypeScript 5.9, zod 4.
+Stack: Next.js 16 (App Router), React 19, TypeScript 5.9, zod 4, postgres.js.
 
 Gestaltung: weißer Hintergrund, Anthrazit `#1E1E1E` für Buttons, Auswahl und Fokus, dezente Grautöne für Linien und Nebenflächen. Belegte Tage sind nicht nur farblich, sondern auch durch Durchstreichung, Schraffur und „×“ gekennzeichnet. Alle Farben stehen als Variablen in `src/app/globals.css`.
 
@@ -38,18 +44,42 @@ Die kompakte Anfrageleiste übernimmt die Textschrift der Website über `--e-glo
 
 ## Deployment (Vercel)
 
-| Variable | Pflicht | Wert |
-| --- | --- | --- |
-| `BOOKING_DATA_SOURCE` | nein | `demo` (Standard, auch wenn nicht gesetzt) |
-| `EMBED_ALLOWED_ORIGINS` | für die iframe-Einbindung | z. B. `https://www.beispiel.de` |
+### Benötigte Dienste (live)
 
-Alle übrigen Variablen in `.env.example` (apaleo, E-Mail) werden im Demomodus nicht gelesen.
+| Dienst | Zweck | Einrichtung |
+| --- | --- | --- |
+| **apaleo** | Verfügbarkeit der SPACE (Property `ALTUS`, Kategorie `ALTUS-SPACE`) | Eigene App/Client-Credentials **nur mit Scope `availability.read`**. Es werden keine Buchungen oder Sperren erzeugt. |
+| **Postgres** (z. B. Neon über den Vercel Marketplace, Region Frankfurt) | Anfragen, E-Mail-Protokoll, Rate-Limit | Je Umgebung eine eigene Datenbank. Tabellen legt die App selbst an. |
+| **Resend** (Region EU) | Interne Benachrichtigung und Eingangsbestätigung | Absenderdomain verifizieren (SPF, DKIM per DNS; DMARC empfohlen). Einen API-Key mit „Sending access“ nur für diese Domain anlegen. |
+| **Vercel** | Hosting, Cron für E-Mail-Wiederholung | Variablen getrennt für Preview und Production. Den Cron führt Vercel nur in Production aus. |
+
+### Umgebungsvariablen
+
+| Variable | Pflicht (live) | Inhalt |
+| --- | --- | --- |
+| `BOOKING_MODE` | ja | `demo` oder `live` (ohne Wert: `demo`; altes `BOOKING_DATA_SOURCE` wird weiter verstanden) |
+| `APALEO_CLIENT_ID`, `APALEO_CLIENT_SECRET` | ja | apaleo-Client (Scope `availability.read`) |
+| `APALEO_PROPERTY_ID` | ja | `ALTUS` |
+| `APALEO_UNIT_GROUP_ID` | ja | `ALTUS-SPACE` |
+| `DATABASE_URL` | ja | Postgres-Verbindung (TLS) |
+| `RESEND_API_KEY` | ja | Resend-API-Key |
+| `MAIL_FROM` | ja | Absender auf der verifizierten Domain, z. B. `SPACE im HØV <anfrage@…>` |
+| `MAIL_INTERNAL_TO` | ja | `stay@unique-places.com` |
+| `MAIL_REPLY_TO` | empfohlen | Antwortadresse der Bestätigung, z. B. `stay@unique-places.com` |
+| `REQUEST_HASH_SECRET` | ja | Zufallswert ≥ 32 Zeichen (Pseudonymisierung von IP-Adressen) |
+| `ADMIN_USER`, `ADMIN_PASSWORD` | für `/intern` | Zugang zur internen Übersicht (Passwort ≥ 12 Zeichen) |
+| `CRON_SECRET` | empfohlen | ≥ 16 Zeichen, schützt die E-Mail-Wiederholung |
+| `PRIVACY_URL` | nein | Standard `https://unique-places.com/datenschutz` |
+| `EMBED_ALLOWED_ORIGINS` | für die Einbindung | `https://unique-places.com https://www.unique-places.com` (beim Build gelesen) |
+| `MAIL_TRANSPORT`, `APALEO_API_URL`, `APALEO_IDENTITY_URL`, `RESEND_API_URL` | nein | Nur für Tests. `MAIL_TRANSPORT=log` und `http://`-Adressen sind in Production gesperrt. |
+
+**Vorgehen:** Zuerst die Preview-Umgebung (Feature-Branch) auf `live` stellen und abnehmen. Production bleibt bis zur Abnahme auf `demo`.
 
 ## Ablauf
 
 1. **Termin:** Kalender mit Monatsnavigation, Auswahl „Ein Tag“ oder „Mehrere Tage“ (zusammenhängend, ohne belegte Tage), Uhrzeit von/bis.
 2. **Anlass:** Seminar & Workshop, Teamtag & Retreat, Private Feier, Etwas anderes. Dazu Personenzahl, optionale Wünsche und die Option „Wir möchten auch im HØV übernachten“.
-3. **Kontakt:** Name und E-Mail sind Pflicht, Unternehmen und Telefon optional. Darunter eine Übersicht aller Angaben mit „Ändern“, dann „Unverbindlich anfragen“ und anschließend eine beispielhafte Bestätigung.
+3. **Kontakt:** Name und E-Mail sind Pflicht, Unternehmen und Telefon optional. Darunter eine Übersicht aller Angaben mit „Ändern“, dann „Unverbindlich anfragen“. Darüber steht ein Datenschutzhinweis mit Link. Die Bestätigung mit Anfragenummer erscheint erst, wenn die Anfrage gespeichert ist (im Demomodus eine beispielhafte Bestätigung).
 
 Eingaben bleiben beim Wechsel zwischen den Schritten erhalten, auch bei Browser-Zurück und Neuladen (`sessionStorage` des Tabs; wird nach dem Absenden gelöscht). Jeder Schritt hat einen eigenen URL-Hash (`#termin`, `#anlass`, `#kontakt`). Ein Direktaufruf eines späteren Schritts ohne gültige Vorangaben führt zum ersten unvollständigen Schritt.
 
@@ -92,26 +122,73 @@ src/
     booking.ts             Fachmodell, Konstanten, zod-Validierung
     availability.ts        API-Antworttypen
   server/                  nur serverseitig ("server-only")
-    booking-backend.ts     Schnittstelle BookingBackend + Auswahl der Datenquelle
+    config.ts              Betriebsart und Umgebungsvariablen (demo / live / gesperrt)
+    booking-backend.ts     Auswahl der Datenquelle
     demo-backend.ts        BEISPIELDATEN (deterministisch belegte Tage)
-    apaleo-backend.ts      Platzhalter mit skizziertem Ablauf
-    config.ts              Umgebungsvariablen
+    apaleo-backend.ts      apaleo-Verfügbarkeit (nur lesend)
+    db.ts, requests.ts     Postgres: Anfragen, Duplikaterkennung, Rate-Limit
+    mail.ts                E-Mails (Resend) mit Protokoll und Wiederholung
+    log.ts                 Protokoll ohne vollständige personenbezogene Daten
+  proxy.ts                 Basic Auth für /intern
   app/
     page.tsx, embed/       Seiten (laden Startdaten serverseitig)
     api/availability       GET belegte Tage je Monat
-    api/anfrage            POST Anfrage (erneute Prüfung auf dem Server)
+    api/anfrage            POST Anfrage
+    intern/                geschützte Übersicht der Anfragen
+    api/intern/…           Status ändern, E-Mails erneut senden
+    api/cron/mail-retry    tägliche Wiederholung fehlgeschlagener E-Mails
   components/booking/      Oberfläche (Client-Komponenten)
 ```
 
-Die Oberfläche spricht ausschließlich mit `/api/*`. Für die apaleo-Anbindung reicht es, `apaleo-backend.ts` zu implementieren und `BOOKING_DATA_SOURCE=apaleo` zu setzen. Oberfläche und API-Routen bleiben unverändert.
+Die Oberfläche spricht ausschließlich mit `/api/*`, nie direkt mit apaleo.
+
+**apaleo-Verfügbarkeit** (`GET /availability/v1/unit-groups`): Die SPACE-Buchungen in apaleo sind Tagesnutzungen, je Veranstaltungstag eine. Abgefragt wird deshalb für jeden Tag des Zeitraums, **einschließlich des letzten Tages**:
+- die Tageszeitscheibe `DayUse` (10–16 Uhr),
+- die Abendzeitscheibe `OverNight`, die an diesem Tag beginnt (Abendveranstaltungen und Sperren ab 16 Uhr).
+
+Ein Tag gilt nur als frei, wenn beide Zeitscheiben verfügbar sind: `availableCount ≥ 1`, keine Wartung (out of service/order/inventory), keine Block-Belegung. Netzwerkfehler, Zeitüberschreitung (8 s), HTTP-Fehler, unerwartete Antworten oder fehlende Tage führen zu einer Fehlermeldung, **nie zu „frei“**. Der Kalender nutzt einen Zwischenspeicher von 60 Sekunden. Beim Absenden wird immer frisch geprüft.
+
+**Ablauf beim Absenden (live):**
+1. Serverseitige Validierung.
+2. Spam-Schutz: Honeypot und Mindestausfüllzeit.
+3. Rate-Limit: 5 Anfragen je 10 Minuten und 20 je Tag, je pseudonymisierter IP.
+4. Frische apaleo-Prüfung.
+5. Speichern mit Referenz (`SPACE-JJMM-XXXX`, Status „Neu“).
+6. E-Mails versenden.
+
+Der Erfolg wird erst nach dem Speichern gemeldet. Eine fehlgeschlagene E-Mail ändert daran nichts: Sie wird protokolliert und in `/intern` oder per Cron erneut versendet.
+
+**Doppelte Einsendungen:** Jede Anfrage trägt einen im Browser erzeugten Schlüssel. Gleicher Schlüssel (Doppelklick, erneutes Senden nach Netzfehler) oder gleiche E-Mail, gleicher Termin und gleicher Anlass innerhalb von 30 Minuten ergeben dieselbe Referenz. Es entsteht kein zweiter Datensatz und es gehen keine weiteren E-Mails raus.
+
+**Interne Übersicht:** `https://<app>/intern` (HTTP Basic Auth mit `ADMIN_USER`/`ADMIN_PASSWORD`, `noindex`, `no-store`) listet alle gespeicherten Anfragen mit Status und E-Mail-Status. Je Anfrage gibt es:
+- Status und interne Notiz ändern,
+- nicht versendete E-Mails erneut senden.
+
+Gespeicherte Anfragen sind nirgends öffentlich abrufbar.
 
 **Datum und Zeitzone:** Kalendertage sind reine Datumswerte (`YYYY-MM-DD`) in der lokalen Zeit am Veranstaltungsort. „Heute“ wird immer in `Europe/Berlin` bestimmt, unabhängig von der Zeitzone des Browsers oder Servers (Vercel läuft in UTC). `venueDateTimeToIso()` erzeugt Zeitstempel mit korrektem Offset (MEZ/MESZ) für apaleo.
 
-## Sicherheit
+## Sicherheit und Datenschutz
 
 - Zugangsdaten nur als serverseitige Umgebungsvariablen (ohne `NEXT_PUBLIC_`). Lokal kommen sie in `.env.local`, auf Vercel in die Project Settings. Alle `.env*`-Dateien außer `.env.example` sind per `.gitignore` ausgeschlossen.
-- Der Server prüft jede Anfrage erneut: Schema, Mindestvorlauf, Zeiten und Verfügbarkeit.
-- Ein einfaches Honeypot-Feld hält Bots ab.
+- apaleo wird ausschließlich lesend genutzt (Scope `availability.read`).
+- Protokolle enthalten keine Namen, Nachrichten oder Telefonnummern. E-Mail-Adressen sind maskiert (`e***@e***.org`), IP-Adressen nur als HMAC-Pseudonym im Rate-Limit.
+- Interne Aktionen prüfen Zugangsdaten und Herkunft (Schutz vor CSRF).
+- Ein Textbaustein für die Datenschutzerklärung, passend zu den tatsächlich genutzten Diensten, liegt in [`docs/datenschutz-baustein.md`](docs/datenschutz-baustein.md) (Entwurf, rechtlich zu prüfen).
+- Anfragen aus dem Demomodus wurden nie gespeichert. Die Live-Datenbank startet leer.
+
+## Abnahmetests (live)
+
+`tests/abnahme/` enthält eine Nachbildung von apaleo und Resend (`mock-server.mjs`) und die API-Abnahme (`api-abnahme.mjs`). Damit lassen sich alle Fälle ohne echte Buchungen oder E-Mails gegen eine lokale Postgres prüfen:
+- freie und belegte Termine,
+- Wartung, Abendsperre und Block,
+- mehrtägige Anfragen (letzter Tag belegt),
+- apaleo-Ausfall (500, 204, ungültige Antwort, abgelehnter Zugang, Zeitüberschreitung, fehlender Tag),
+- E-Mail-Ausfall mit Wiederholung,
+- doppelte und parallele Einsendung,
+- Spam-Schutz, Rate-Limit und interner Zugang.
+
+Die Anleitung steht am Anfang von `api-abnahme.mjs`.
 
 ## Annahmen und offene Punkte
 
@@ -120,4 +197,3 @@ Die folgenden Punkte sind angenommen und zentral in `src/lib/booking.ts` anpassb
 - Anfragen sind ab morgen möglich (`MIN_LEAD_DAYS = 1`), bis 24 Monate im Voraus.
 - Uhrzeiten im 30-Minuten-Raster von 06:00 bis 24:00 Uhr. Bei mehreren Tagen gilt „von“ für den ersten und „bis“ für den letzten Tag.
 - Es gibt bewusst keine Kapazitätsgrenze. Die Personenzahl wird nur auf Plausibilität geprüft (ganze Zahl ab 1).
-- Vor dem Livegang ergänzen: Datenschutzhinweis bzw. -link, Impressum, Empfänger der Anfragen (E-Mail) und Rate-Limiting für `/api/anfrage`.

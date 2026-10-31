@@ -1,6 +1,5 @@
 import "server-only";
 import { eachDay, type IsoDate } from "@/lib/dates";
-import type { BookingBackend } from "./booking-backend";
 
 /**
  * BEISPIELDATEN – keine echte Belegung.
@@ -30,9 +29,9 @@ export function isDemoBooked(date: IsoDate): boolean {
   return hash(`space-demo:${date}`) % 100 < 16;
 }
 
-export const demoBackend: BookingBackend = {
+export const demoBackend = {
   source: "demo",
-  async getBookedDates(from, to) {
+  async getBookedDates(from: IsoDate, to: IsoDate): Promise<IsoDate[]> {
     return eachDay(from, to).filter(isDemoBooked);
   },
   async submitRequest() {

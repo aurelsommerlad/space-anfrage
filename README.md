@@ -50,7 +50,7 @@ Zwei Elementor-Widgets „HTML“:
 | B – vollständiges Formular (iframe) | [`docs/elementor-formular.html`](docs/elementor-formular.html) | `/space-anfrage/` |
 
 **Einstellungen:**
-- **Widget A:** `TARGET_URL` (Adresse der Formularseite, Standard `/space-anfrage/`, zusätzlich im `action` des `<form>`) und `HEADER_OFFSET` (Höhe eines fixierten Website-Headers) stehen oben im Skript. Die Leiste ist reines HTML/CSS und immer sichtbar; das Skript ergänzt nur den Kalender. Ohne JavaScript sendet der Pfeil das Formular normal ab (nur Personenzahl). Das Widget darf mehrfach auf einer Seite stehen. Prüfen im Browser: `window.SpaceAnfrageLeiste4` und `data-sa-ready="4"` am `<form>`.
+- **Widget A:** Leiste als HTML/CSS im Widget, der Kalender wird als Datei `https://<app>/anfrageleiste.js` (aus `public/anfrageleiste.js`) per `<script src>` geladen. So kann WordPress den Skriptcode nicht verändern, und Änderungen am Kalender erfordern nur ein Vercel-Deployment. Einstellungen im `<form>` des Widgets: `action` (Adresse der Formularseite, Standard `/space-anfrage/`) und `data-header-offset` (Höhe eines fixierten Website-Headers). Ohne Skript bleibt die Leiste sichtbar; der Pfeil sendet dann nur die Personenzahl. Prüfen im Browser: `window.SpaceAnfrageKalender` und `data-sa-ready="5"` am `<form>`.
 - **Widget B:** `APP_ORIGIN` (Vercel-Adresse der App) und `SCROLL_OFFSET` (Höhe eines fixierten Website-Headers).
 - **Vercel:** `EMBED_ALLOWED_ORIGINS` auf die Origin der WordPress-Seite setzen und neu deployen.
 

@@ -1,5 +1,5 @@
 /*!
- * SPACE im HØV – Anfrageleiste: Kalender (Version 6)
+ * SPACE im HØV – Anfrageleiste: Kalender (Version 7)
  * Wird vom Elementor-Widget per <script src> geladen. Die Leiste selbst ist
  * HTML/CSS im Widget und bleibt ohne dieses Skript sichtbar.
  * Übergeben werden nur beginn, ende und personen – keine personenbezogenen Daten.
@@ -13,7 +13,7 @@
   var DEFAULT_TARGET = "/space-anfrage/";
   var DEFAULT_HEADER_OFFSET = 100;
 
-  var VERSION = "6";
+  var VERSION = "7";
   var MAX_MONTHS_AHEAD = 24;
   var TWO_MONTHS_MIN_WIDTH = 760;
   var SELECTOR = "form[data-sa-leiste]";
@@ -47,12 +47,12 @@
     ".pop.two .month+.month{margin-left:28px;padding-left:28px;border-left:1px solid #e8e8e8}",
     ".title{height:40px;margin:0 0 6px;font-size:19px;font-weight:400;line-height:40px;text-align:center}",
     ".title strong{font-weight:700}",
-    "table{width:100%;margin:0;border:0;border-collapse:separate;border-spacing:0 4px;table-layout:fixed}",
+    "table{width:100%;margin:0;border:0;border-collapse:separate;border-spacing:0 1px;table-layout:fixed}",
     "th,td{margin:0;padding:0;border:0;background:transparent;text-align:center;vertical-align:middle}",
-    "th{height:30px;font-size:13px;font-weight:400;color:#74736e}",
-    ".day{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:44px;padding:0;background:transparent;border:0;border-radius:0;color:#1e1e1e;font-size:15px;font-weight:400;line-height:1;font-variant-numeric:tabular-nums;cursor:pointer;outline:none}",
-    ".day::before{content:'';position:absolute;top:2px;bottom:2px;left:0;right:0}",
-    ".day>span{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:40px;max-width:100%;height:40px;border-radius:50%}",
+    "th{height:28px;font-size:13px;font-weight:400;color:#74736e}",
+    ".day{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:40px;padding:0;background:transparent;border:0;border-radius:0;color:#1e1e1e;font-size:15px;font-weight:400;line-height:1;font-variant-numeric:tabular-nums;cursor:pointer;outline:none}",
+    ".day::before{content:'';position:absolute;top:1px;bottom:1px;left:0;right:0}",
+    ".day>span{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:38px;max-width:100%;height:38px;border-radius:50%}",
     ".day.today>span{box-shadow:inset 0 0 0 1px #9a9a9a}",
     ".day[aria-disabled=true]{color:#c9c9c9;cursor:default}",
     ".day:not([aria-disabled=true]):hover>span{box-shadow:inset 0 0 0 1px #1e1e1e}",
@@ -178,7 +178,7 @@
 
     var today = todayBerlin();
     var earliest = addDays(today, 1); // Anfragen ab morgen
-    var minMonth = monthOf(today);
+    var minMonth = monthOf(earliest); // erster Monat mit anfragbaren Tagen
     var maxMonth = addMonths(minMonth, MAX_MONTHS_AHEAD);
     var latest = addDays(addMonths(maxMonth, 1) + "-01", -1);
 
@@ -340,7 +340,7 @@
       temp = { start: committed.start, end: committed.end };
       hover = null;
       focusDate = temp.start || earliest;
-      view = temp.start ? monthOf(temp.start) : isTwo() ? minMonth : monthOf(earliest);
+      view = monthOf(temp.start || earliest);
       pop.hidden = false;
       openInstance = api;
       dateBtn.setAttribute("aria-expanded", "true");

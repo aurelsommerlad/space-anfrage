@@ -1,5 +1,5 @@
 <!--
-  SPACE im HØV – kompakte Anfrageleiste (Widget A), Version 5
+  SPACE im HØV – kompakte Anfrageleiste (Widget A), Version 7
   Einfügen in ein Elementor-Widget "HTML". Darf mehrfach auf einer Seite stehen.
   Die Leiste ist reines HTML/CSS und immer sichtbar. Der Kalender kommt als
   Datei von der App (letzte Zeile) – WordPress kann den Code so nicht verändern.
@@ -107,23 +107,28 @@
     display: block !important;
     cursor: text !important;
   }
-  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date:hover,
-  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__input:hover {
-    background: #ffffff !important;
-    border-color: #a8a8a8 !important;
-    color: #1e1e1e !important;
+  @media (hover: hover) {
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date:hover,
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__input:hover {
+      background: #ffffff !important;
+      border-color: #a8a8a8 !important;
+      color: #1e1e1e !important;
+    }
   }
-  /* Mausklick: nur ein dünner, dezenter Rahmen */
+  /* Fokus allein (z. B. nach "Übernehmen") ist kein aktiver Zustand:
+     Rahmen bleibt hellgrau wie im Ruhezustand. */
   .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date:focus,
   .sa-leiste.sa-leiste.sa-leiste .sa-leiste__input:focus {
     background: #ffffff !important;
-    border: 1px solid #8c8c8c !important;
+    border: 1px solid #dcdcdc !important;
     box-shadow: none !important;
     outline: none !important;
     color: #1e1e1e !important;
   }
-  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date[aria-expanded="true"] {
-    border-color: #1e1e1e !important;
+  /* Aktiv: Kalender offen bzw. Eingabe im Personenfeld – dünner, dunklerer Rahmen */
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date[aria-expanded="true"],
+  .sa-leiste.sa-leiste.sa-leiste .sa-leiste__input:focus {
+    border-color: #8c8c8c !important;
   }
   /* Tastatur: klar sichtbarer Fokus */
   .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date:focus-visible,
@@ -244,4 +249,4 @@
   }
 </style>
 
-<script src="https://space-anfrage.vercel.app/anfrageleiste.js?v=5" defer></script>
+<script src="https://space-anfrage.vercel.app/anfrageleiste.js?v=7" defer></script>

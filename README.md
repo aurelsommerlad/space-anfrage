@@ -50,7 +50,7 @@ Zwei Elementor-Widgets „HTML“:
 | B – vollständiges Formular (iframe) | [`docs/elementor-formular.html`](docs/elementor-formular.html) | `/space-anfrage/` |
 
 **Einstellungen:**
-- **Widget A:** `TARGET_URL`, die Adresse der Formularseite (Standard `/space-anfrage/`), steht an genau einer Stelle oben im Skript. Steht die Leiste auf mehreren Seiten, das Widget als globales Elementor-Widget speichern.
+- **Widget A:** `TARGET_URL`, die Adresse der Formularseite (Standard `/space-anfrage/`), und `HEADER_OFFSET` (Höhe eines fixierten Website-Headers) stehen oben im Skript. Das Widget darf mehrfach auf einer Seite stehen (z. B. getrennte Desktop-/Mobil-Abschnitte) und rendert in einem eigenen Shadow DOM, sodass Theme- und Elementor-Stile nicht hineinwirken. Prüfen im Browser: `window.SpaceAnfrageLeiste` zeigt Version und Anzahl initialisierter Leisten.
 - **Widget B:** `APP_ORIGIN` (Vercel-Adresse der App) und `SCROLL_OFFSET` (Höhe eines fixierten Website-Headers).
 - **Vercel:** `EMBED_ALLOWED_ORIGINS` auf die Origin der WordPress-Seite setzen und neu deployen.
 

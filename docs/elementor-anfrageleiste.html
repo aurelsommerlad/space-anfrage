@@ -1,5 +1,5 @@
 <!--
-  SPACE im HØV – kompakte Anfrageleiste (Widget A), Version 9
+  SPACE im HØV – kompakte Anfrageleiste (Widget A), Version 10
   Einfügen in ein Elementor-Widget "HTML". Darf mehrfach auf einer Seite stehen.
   Die Leiste ist reines HTML/CSS und immer sichtbar. Der Kalender kommt als
   Datei von der App (letzte Zeile) – WordPress kann den Code so nicht verändern.
@@ -65,8 +65,9 @@
   }
   /* Aufteilung nach der verfügbaren Breite der Leiste (nicht des Fensters),
      z. B. im schmalen Elementor-Popup:
-     - ab 570 px: Datum | Personen | Button in einer Zeile
-     - darunter:  Datum über die volle Breite, darunter Personen | Button
+     - ab 510 px: Datum | Personen | Button in einer Zeile
+       (510–569 px etwas kompakter, ohne Kalendersymbol)
+     - darunter (Mobilgeräte): Datum über die volle Breite, darunter Personen | Button
      - unter 334 px: Button in eigener Zeile über die volle Breite
      Der Button ist – außer im letzten Fall – so breit wie sein Text. */
   .sa-leiste.sa-leiste.sa-leiste {
@@ -82,9 +83,9 @@
   .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date {
     grid-column: 1 / -1 !important;
   }
-  @container sa-leiste (min-width: 570px) {
+  @container sa-leiste (min-width: 510px) {
     .sa-leiste.sa-leiste.sa-leiste .sa-leiste__row {
-      grid-template-columns: minmax(0, 1fr) clamp(120px, 22%, 180px) auto !important;
+      grid-template-columns: minmax(0, 1fr) clamp(100px, 22%, 180px) auto !important;
     }
     .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date {
       grid-column: auto !important;
@@ -258,6 +259,22 @@
       background: #3a3a3a !important;
       border-color: #3a3a3a !important;
       color: #ffffff !important;
+    }
+  }
+  /* Kompakte Einzeile, z. B. im schmalen Popup bei 1280 px Fensterbreite */
+  @container sa-leiste (min-width: 510px) and (max-width: 569px) {
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__row {
+      gap: 8px !important;
+    }
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__date,
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__input {
+      padding: 0 14px !important;
+    }
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__icon {
+      display: none !important;
+    }
+    .sa-leiste.sa-leiste.sa-leiste .sa-leiste__submit {
+      padding: 0 18px !important;
     }
   }
   .sa-leiste.sa-leiste.sa-leiste .sa-leiste__error {

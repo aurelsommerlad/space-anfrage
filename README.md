@@ -175,10 +175,10 @@ Der Erfolg wird erst nach dem Speichern gemeldet. Eine fehlgeschlagene E-Mail ä
 
 **Doppelte Einsendungen:** Jede Anfrage trägt einen im Browser erzeugten Schlüssel. Gleicher Schlüssel (Doppelklick, erneutes Senden nach Netzfehler) oder gleiche E-Mail, gleicher Termin und gleicher Anlass innerhalb von 30 Minuten ergeben dieselbe Referenz. Es entsteht kein zweiter Datensatz und es gehen keine weiteren E-Mails raus.
 
-**Selbsttest:** `/intern/selbsttest` prüft:
+**Selbsttest:** `/intern/selbsttest` (öffentlich und ohne Geheimnisse auch als `/api/status`) prüft:
 - Konfiguration,
 - Datenbank (Verbindung, Schema, Row Level Security),
-- apaleo (Token, nur `availability.read`, lückenlose Verfügbarkeit der nächsten 90 Tage),
+- apaleo (Token, feingranularer Client mit `core.unit_groups_availability.read` oder Scope `availability.read`, lückenlose Verfügbarkeit der nächsten 90 Tage, Gegenprobe: kein Zugriff auf andere Properties),
 - Resend (DKIM, SPF, DMARC, Key).
 
 Über Schaltflächen lassen sich das Schema anlegen und eine Test-E-Mail senden. Der Selbsttest läuft auch im Demomodus. Er zeigt keine Geheimnisse an.

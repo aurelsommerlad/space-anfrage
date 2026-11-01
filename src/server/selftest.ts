@@ -1,8 +1,9 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { resolveMx, resolveTxt } from "node:dns/promises";
 import { addDays, todayInVenue } from "@/lib/dates";
 import { getEmbedAllowedOrigins, getModeState, getPrivacyUrl, mailFromAddress, rawBookingMode, readLiveConfig, type LiveConfig } from "./config";
-import { checkApaleoAccess, getApaleoBlockedDates } from "./apaleo-backend";
+import { checkApaleoAccess, getApaleoBlockedDates, probeOtherProperty } from "./apaleo-backend";
 import { getSql, migrate } from "./db";
 import { FOREIGN_TABLES_SQL, HAS_MIGRATIONS_TABLE_SQL, MIGRATIONS } from "./schema";
 
@@ -23,6 +24,20 @@ function maskHost(host: string): string {
   const [first = "", ...rest] = host.split(".");
   const masked = first.length > 6 ? `${first.slice(0, 3)}…${first.slice(-2)}` : first;
   return [masked, ...rest].join(".");
+}
+
+/** Nicht umkehrbarer Fingerabdruck von Host und Benutzer – zum Abgleich, welche Datenbank verbunden ist. */
+export function dbFingerprint(databaseUrl: string): string {
+  try {
+    const u = new URL(databaseUrl);
+    return createHash("sha256").update(`${u.hostname}|${decodeURIComponent(u.username)}`).digest("hex").slice(0, 10);
+  } catch {
+    return "–";
+  }
+}
+
+function dbRegion(host: string): string {
+  return /(eu|us|ap|sa|ca|me|af)-[a-z]+-\d/.exec(host)?.[0] ?? "";
 }
 
 function dbProvider(host: string): string {
@@ -63,7 +78,7 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   }
 }
 
-async function checkDatabase(cfg: LiveConfig, applySchema: boolean): Promise<Check[]> {
+async function checkDatabase(cfg: LiveConfig, applySchema: boolean, pub: boolean): Promise<Check[]> {
   const out: Check[] = [];
   const g = "Datenbank";
   let host = "";
@@ -77,7 +92,7 @@ async function checkDatabase(cfg: LiveConfig, applySchema: boolean): Promise<Che
     group: g,
     label: "Ziel",
     status: provider === "Supabase" ? "warn" : "info",
-    detail: `${provider}, Host ${maskHost(host)}${provider === "Supabase" ? " – bitte sicherstellen, dass dies das eigene SPACE-Projekt ist" : ""}`,
+    detail: `${provider}${dbRegion(host) ? ` (${dbRegion(host)})` : ""}, ${pub ? "" : `Host ${maskHost(host)}, `}Fingerabdruck ${dbFingerprint(cfg.databaseUrl)}${provider === "Supabase" ? " – bitte sicherstellen, dass dies das eigene SPACE-Projekt ist" : ""}`,
   });
   const sql = getSql(cfg.databaseUrl);
   try {
@@ -116,8 +131,19 @@ async function checkDatabase(cfg: LiveConfig, applySchema: boolean): Promise<Che
     const off = rls.filter((r) => !r.on).map((r) => r.relname);
     out.push({ group: g, label: "Row Level Security", status: off.length || rls.length < 4 ? "fail" : "ok", detail: off.length ? `aus bei: ${off.join(", ")}` : "auf allen 4 Tabellen aktiv" });
     if (foreign.length) out.push({ group: g, label: "Weitere Tabellen", status: "warn", detail: `${foreign.length} Tabelle(n), die nicht zu SPACE gehören – eigene Datenbank empfohlen` });
-    const [c] = await sql<{ n: number }[]>`select count(*)::int as n from anfragen`;
-    out.push({ group: g, label: "Gespeicherte Anfragen", status: "info", detail: String(c?.n ?? 0) });
+    if (!pub) {
+      const [c] = await sql<{ n: number }[]>`select count(*)::int as n from anfragen`;
+      out.push({ group: g, label: "Gespeicherte Anfragen", status: "info", detail: String(c?.n ?? 0) });
+    }
+    const mails = await sql<{ status: string; n: number }[]>`
+      select status, count(*)::int as n from anfrage_emails where updated_at > now() - interval '7 days' group by status`;
+    const m = Object.fromEntries(mails.map((r) => [r.status, r.n])) as Record<string, number>;
+    out.push({
+      group: "E-Mail (Resend)",
+      label: "Versand der letzten 7 Tage",
+      status: (m.fehlgeschlagen ?? 0) > 0 ? "warn" : "info",
+      detail: `gesendet ${m.gesendet ?? 0}, fehlgeschlagen ${m.fehlgeschlagen ?? 0}, ausstehend ${m.ausstehend ?? 0}`,
+    });
   } catch (e) {
     out.push({ group: g, label: "Schema", status: "fail", detail: dbError(e) });
   }
@@ -129,8 +155,16 @@ async function checkApaleo(cfg: LiveConfig): Promise<Check[]> {
   const out: Check[] = [];
   try {
     const { scopes } = await checkApaleoAccess(cfg.apaleo);
-    if (!scopes) {
-      out.push({ group: g, label: "Zugang", status: "ok", detail: "Token erhalten (Scopes nicht lesbar)" });
+    if (scopes?.includes("identity:permissions")) {
+      // Feingranularer Client: Berechtigungen stehen nicht im Token; geprüft über die Abfragen unten.
+      out.push({
+        group: g,
+        label: "Zugang und Rechte",
+        status: "ok",
+        detail: "Token erhalten – feingranularer Client (benötigt: core.unit_groups_availability.read und Freigabe für " + cfg.apaleo.propertyId + "; Wirkung unten geprüft)",
+      });
+    } else if (!scopes) {
+      out.push({ group: g, label: "Zugang", status: "ok", detail: "Token erhalten (Rechte nicht lesbar; Wirkung unten geprüft)" });
     } else {
       const relevant = scopes.filter((s) => !["openid", "profile", "offline_access"].includes(s));
       const extra = relevant.filter((s) => s !== "availability.read");
@@ -141,8 +175,8 @@ async function checkApaleo(cfg: LiveConfig): Promise<Check[]> {
         detail: !relevant.includes("availability.read")
           ? `Scope availability.read fehlt (vorhanden: ${relevant.join(", ") || "keine"})`
           : extra.length
-            ? `Mehr Rechte als nötig: ${extra.join(", ")} – empfohlen nur availability.read`
-            : "Token erhalten, nur availability.read (lesend)",
+            ? `Scope-Client mit mehr Rechten als nötig: ${extra.join(", ")} – empfohlen: feingranularer Client mit core.unit_groups_availability.read`
+            : "Token erhalten, Scope-Client nur mit availability.read (lesend)",
       });
     }
   } catch (e) {
@@ -162,8 +196,39 @@ async function checkApaleo(cfg: LiveConfig): Promise<Check[]> {
   } catch (e) {
     out.push({ group: g, label: "Verfügbarkeit", status: "fail", detail: (e as Error).message });
   }
+  // Gegenprobe: Zugriff auf andere Properties des Kontos muss abgelehnt werden (nur lesend).
+  const others = OTHER_PROPERTIES.filter((p) => p !== cfg.apaleo.propertyId);
+  if (others.length) {
+    const day = addDays(todayInVenue(), 1);
+    const results = await Promise.all(
+      others.map(async (p) => {
+        try {
+          return [p, await probeOtherProperty(cfg.apaleo, p, day)] as const;
+        } catch {
+          return [p, 0] as const;
+        }
+      }),
+    );
+    const open = results.filter(([, st]) => st >= 200 && st < 300).map(([p]) => p);
+    const unclear = results.filter(([, st]) => !(st >= 200 && st < 300) && st !== 403 && st !== 404).map(([p, st]) => `${p} (${st || "Fehler"})`);
+    out.push({
+      group: g,
+      label: `Zugriff nur auf ${cfg.apaleo.propertyId}`,
+      status: open.length ? "warn" : unclear.length ? "info" : "ok",
+      detail: open.length
+        ? `Zugang kann auch ${open.join(", ")} lesen – in apaleo auf ${cfg.apaleo.propertyId} beschränken`
+        : unclear.length
+          ? `Gegenprobe unklar: ${unclear.join(", ")}`
+          : `Gegenprobe ${others.join(", ")}: kein Zugriff (wie gewünscht)`,
+    });
+  }
   return out;
 }
+
+/** Weitere Properties im apaleo-Konto (lesend ermittelt am 2026-11-01) für die Gegenprobe; per Variable änderbar. */
+const OTHER_PROPERTIES = (process.env.APALEO_OTHER_PROPERTY_IDS ?? "ALPILA,HUESLE,LAEKE,TEST")
+  .split(/[,\s]+/)
+  .filter((p) => /^[A-Z0-9-]{2,20}$/.test(p));
 
 async function txt(name: string): Promise<string[] | null> {
   try {
@@ -217,7 +282,9 @@ async function checkMail(cfg: LiveConfig): Promise<Check[]> {
   return out;
 }
 
-export async function runSelftest(opts: { applySchema?: boolean } = {}): Promise<{ checks: Check[]; ready: boolean; mode: string }> {
+export async function runSelftest(
+  opts: { applySchema?: boolean; public?: boolean } = {},
+): Promise<{ checks: Check[]; ready: boolean; mode: string }> {
   const checks: Check[] = [];
   const state = getModeState();
   const raw = rawBookingMode();
@@ -250,8 +317,10 @@ export async function runSelftest(opts: { applySchema?: boolean } = {}): Promise
   });
   checks.push({ group: "Konfiguration", label: "Datenschutz-Link", status: "info", detail: getPrivacyUrl() });
   if (live.config) {
-    const [db, ap, mail] = await Promise.all([checkDatabase(live.config, !!opts.applySchema), checkApaleo(live.config), checkMail(live.config)]);
-    checks.push(...db, ...ap, ...mail);
+    // Im Live-Betrieb wird das Schema ohnehin beim ersten Zugriff angelegt (mit Schutz vor fremden Tabellen).
+    const applySchema = !!opts.applySchema || state.mode === "live";
+    const [db, ap, mail] = await Promise.all([checkDatabase(live.config, applySchema, !!opts.public), checkApaleo(live.config), checkMail(live.config)]);
+    checks.push(...ap, ...mail, ...db);
   }
   return { checks, ready: !!live.config && !checks.some((c) => c.status === "fail" && c.group !== "Betriebsart"), mode: state.mode };
 }

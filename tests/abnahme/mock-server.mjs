@@ -34,6 +34,9 @@ http.createServer(async (req, res) => {
       const slices = FIXTURE[tpl].filter((ts) => ts.from.slice(0, 10) >= p.get("from") && ts.from.slice(0, 10) <= p.get("to"));
       return json(res, 200, { timeSlices: slices, count: slices.length });
     }
+    // Feingranularer Client: nur freigegebene Properties, sonst 403
+    if (!(S.allowedProps ?? ["ALTUS"]).includes(p.get("propertyId"))) return json(res, 403, { message: "Forbidden" });
+    if (!p.get("unitGroupIds")) return json(res, 200, { timeSlices: [], count: 0 });
     if (p.get("propertyId") !== "ALTUS" || p.get("unitGroupIds") !== "ALTUS-SPACE") return json(res, 400, { message: "bad ids" });
     const slices = days(p.get("from"), p.get("to")).filter((d) => d !== S.dropDay).map((d) => {
       const isDay = tpl === "DayUse";

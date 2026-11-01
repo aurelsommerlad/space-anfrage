@@ -32,10 +32,14 @@ Das Schema legst du später im Selbsttest an (Teil B). Die Datenbank darf noch l
 
 1. In apaleo (Account von HØV by UNIQUE PLACES) eine **eigene App mit Client-Credentials-Zugang** anlegen. In apaleo heißt das „Simple client“ bzw. „Custom app“ unter **Apps / Connected apps**.
 2. Name z. B. `SPACE-ANFRAGE`.
-3. Als Scope **ausschließlich `availability.read`** auswählen.
+3. Rechte (eine der beiden Varianten):
+   - **Feingranularer Client (empfohlen):** Berechtigung **`core.unit_groups_availability.read`**, Property-Zugriff **nur ALTUS**.
+   - **Scope-Client:** Scope **ausschließlich `availability.read`**.
 4. Client ID und Client Secret werden einmalig angezeigt. **Direkt** in Vercel eintragen (A5), nicht zwischenspeichern.
 
-Der Selbsttest zeigt später an, ob der Zugang nur `availability.read` hat. Bei mehr Rechten erscheint ein Hinweis.
+Der Selbsttest prüft die Wirkung:
+- Verfügbarkeit für ALTUS muss lesbar sein.
+- Eine Gegenprobe auf die anderen Properties des Kontos (ALPILA, HUESLE, LAEKE, TEST) muss abgelehnt werden.
 
 ### A3. E-Mail-Absender (Resend)
 
@@ -135,6 +139,8 @@ Die Seite zeigt keine Geheimnisse an. Die Tabelle kann also für die Abstimmung 
 **Zurück auf Demo** (falls nötig): `BOOKING_MODE=demo` und Redeploy. Gespeicherte Anfragen bleiben in der Datenbank.
 
 ## Betrieb
+
+- **Status ohne Anmeldung:** https://space-anfrage.vercel.app/api/status zeigt dieselben Prüfungen wie der Selbsttest. Er gibt keine Geheimnisse und keine personenbezogenen Daten aus, die Datenbank nur als Anbieter mit Fingerabdruck.
 
 - **Anfragen:** https://space-anfrage.vercel.app/intern (Status, Notizen, E-Mails erneut senden).
 - **Fehlgeschlagene E-Mails:** Ein Vercel-Cron versucht sie täglich um 06:17 UTC erneut.

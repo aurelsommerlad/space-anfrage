@@ -141,6 +141,11 @@ async function fetchTemplate(cfg: Cfg, template: "DayUse" | "OverNight", from: I
     throw new ApaleoUnavailableError(`Verfügbarkeit: ${(e as Error).name}`);
   }
   if (res.status === 204) throw new ApaleoUnavailableError("Verfügbarkeit: keine Daten (204)");
+  if (res.status === 403) {
+    throw new ApaleoUnavailableError(
+      "Verfügbarkeit: HTTP 403 – Berechtigung (core.unit_groups_availability.read bzw. availability.read) oder Freigabe der Property fehlt",
+    );
+  }
   if (!res.ok) throw new ApaleoUnavailableError(`Verfügbarkeit: HTTP ${res.status}`);
   const body = (await res.json().catch(() => null)) as { timeSlices?: TimeSlice[] } | null;
   if (!body || !Array.isArray(body.timeSlices)) throw new ApaleoUnavailableError("Verfügbarkeit: unerwartete Antwort");
@@ -226,6 +231,22 @@ export async function checkApaleoAccess(cfg: Cfg): Promise<{ scopes: string[] | 
   } catch {
     return { scopes: null };
   }
+}
+
+/**
+ * Selbsttest-Gegenprobe: Hat der Zugang auch Lesezugriff auf eine andere Property?
+ * Liefert den HTTP-Status der Verfügbarkeitsabfrage (403/404 = kein Zugriff, gewünscht).
+ */
+export async function probeOtherProperty(cfg: Cfg, propertyId: string, day: IsoDate): Promise<number> {
+  const url = new URL("/availability/v1/unit-groups", cfg.apiUrl);
+  url.searchParams.set("propertyId", propertyId);
+  url.searchParams.set("from", day);
+  url.searchParams.set("to", day);
+  url.searchParams.set("timeSliceTemplate", "DayUse");
+  url.searchParams.set("pageSize", "1");
+  const access = await getToken(cfg);
+  const res = await fetchWithTimeout(url.toString(), { headers: { Authorization: `Bearer ${access}`, Accept: "application/json" } });
+  return res.status;
 }
 
 /** Nur für Tests: Zwischenspeicher leeren. */

@@ -159,6 +159,8 @@ Ein Tag D gilt nur als frei, wenn **der ganze Kalendertag (00–24 Uhr)** frei i
 
 Damit sind alle wählbaren Zeiten (06–24 Uhr) einschließlich Auf- und Abbau abgedeckt. Die Lückenlosigkeit wird bei jeder Abfrage anhand der Zeitstempel kontrolliert.
 
+Geprüft werden nur anfragbare Tage, also ab morgen (Berliner Zeit). apaleo kürzt eine gerade laufende Zeitscheibe am Beginn auf „jetzt“ und lässt abgelaufene weg. Heutige und vergangene Tage dürfen deshalb die Prüfung des laufenden Monats nicht verhindern. Den Kalendertag einer Zeitscheibe bestimmt die App aus ihrem Ende, das apaleo nie kürzt.
+
 „Frei“ heißt: `availableCount ≥ 1`, keine Wartung, keine Block-Belegung. Netzwerkfehler, Zeitüberschreitung (8 s), HTTP-Fehler, unvollständige Antworten, fehlende Tage oder Lücken ergeben **„nicht prüfbar“**, nie „frei“ und nie „belegt“. Der Kalender zeigt nicht prüfbare Tage grau ohne „×“, mit Hinweis und „Erneut versuchen“. Der Kalender nutzt einen Zwischenspeicher von 60 Sekunden. Beim Absenden wird immer frisch geprüft.
 
 **Datenbank:** Das Schema steht versioniert in `src/server/schema.ts`. Anwenden mit `npm run db:migrate -- --ziel=<host>`, oder die App wendet es beim ersten Zugriff automatisch an. Row Level Security ist auf allen Tabellen aktiv. Enthält die Datenbank fremde Tabellen und noch kein SPACE-Schema, wird aus Sicherheitsgründen nichts angelegt. Einrichtung: [`docs/live-einrichtung.md`](docs/live-einrichtung.md).

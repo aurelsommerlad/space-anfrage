@@ -8,6 +8,13 @@ function days(from, to) { const out = []; let d = new Date(from + "T00:00:00Z");
 // Offset Europe/Berlin für einen lokalen Zeitpunkt (Tag + Stunde)
 function off(day, hour) { const t = new Date(`${day}T${String(hour).padStart(2, "0")}:00:00Z`); const h = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Berlin", hour: "2-digit", hourCycle: "h23" }).format(t)); const o = (h - hour + 24) % 24; return `+0${o}:00`; }
 const at = (day, hour) => `${day}T${String(hour).padStart(2, "0")}:00:00${off(day, hour)}`;
+// Zeitpunkt als ISO mit Berliner Offset (wie apaleo)
+function berlinIso(ms) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(new Date(ms)).map((p) => [p.type, p.value]));
+  const local = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+  const o = Math.round((local - Math.floor(ms / 1000) * 1000) / 3600000);
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}+0${o}:00`;
+}
 const next = (day) => new Date(Date.parse(day + "T00:00:00Z") + 86400000).toISOString().slice(0, 10);
 function json(res, code, body) { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(body)); }
 http.createServer(async (req, res) => {
@@ -38,6 +45,8 @@ http.createServer(async (req, res) => {
     if (!(S.allowedProps ?? ["ALTUS"]).includes(p.get("propertyId"))) return json(res, 403, { message: "Forbidden" });
     if (!p.get("unitGroupIds")) return json(res, 200, { timeSlices: [], count: 0 });
     if (p.get("propertyId") !== "ALTUS" || p.get("unitGroupIds") !== "ALTUS-SPACE") return json(res, 400, { message: "bad ids" });
+    // Wie apaleo: laufende Zeitscheiben beginnen bei "jetzt", abgelaufene fehlen (abschaltbar mit realtime:false)
+    const now = S.now ? Date.parse(S.now) : Date.now();
     const slices = days(p.get("from"), p.get("to")).filter((d) => d !== S.dropDay).map((d) => {
       const isDay = tpl === "DayUse";
       const booked = isDay && S.booked.includes(d);
@@ -49,8 +58,12 @@ http.createServer(async (req, res) => {
       const ug = { unitGroup: { id: "ALTUS-SPACE", code: "SPACE", name: "SPACE" }, availableCount: booked || maint || night ? 0 : 1, sellableCount: 1, physicalCount: 1, houseCount: 1,
         maintenance: { outOfService: 0, outOfOrder: 0, outOfInventory: maint ? 1 : 0 }, block: { definite: blk ? 1 : 0, tentative: 0, optional: 0, remaining: 0 } };
       if (S.apaleo === "noCount") delete ug.availableCount;
+      if (S.realtime !== false) {
+        if (Date.parse(to) <= now) return null;
+        if (Date.parse(from) < now) return { from: berlinIso(now), to, unitGroups: S.apaleo === "noUG" ? [] : [ug] };
+      }
       return { from, to, unitGroups: S.apaleo === "noUG" ? [] : [ug] };
-    });
+    }).filter(Boolean);
     return json(res, 200, { timeSlices: slices, count: slices.length });
   }
   if (url.pathname === "/domains") return json(res, 401, { statusCode: 401, name: "restricted_api_key", message: "This API key is restricted to only send emails" });

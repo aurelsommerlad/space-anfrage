@@ -94,6 +94,39 @@ b = body({ startDate: "2027-10-24", endDate: "2027-10-24", startTime: "12:00", e
 check("Echte apaleo-Daten: 24.10.2027 nicht ganztägig frei (Sperre bis 10 Uhr) → als belegt gewertet", r.status === 409, JSON.stringify(r.json));
 b = body({ startDate: "2027-10-25", endDate: "2027-10-25", startTime: "06:00", endTime: "24:00" }); r = await submit(b);
 check("Echte apaleo-Daten: 25.10.2027 06–24 Uhr → frei, gespeichert", r.status === 200, JSON.stringify(r.json));
+// 6d Laufender Monat: apaleo kürzt laufende und lässt vergangene Zeitscheiben weg
+{
+  const berlinToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" }).format(new Date());
+  const plus = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 86400000).toISOString().slice(0, 10);
+  const mon = (d, n) => { const [y, m] = d.split("-").map(Number); const t = new Date(Date.UTC(y, m - 1 + n, 1)); return t.toISOString().slice(0, 7); };
+  const cur = berlinToday.slice(0, 7), nxt = mon(berlinToday, 1);
+  const lastOfCur = plus(nxt + "-01", -1);
+  const off = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Berlin", hour: "2-digit", hourCycle: "h23" }).format(new Date(berlinToday + "T12:00:00Z"))) - 12;
+  const at = (h) => `${berlinToday}T${h}:00+0${off}:00`;
+  const future = plus(berlinToday, 3);
+  let k = 0;
+  for (const [h, label] of [["08:00", "morgens (Nachtscheibe von gestern läuft)"], ["12:15", "mittags (Tagesscheibe läuft)"], ["17:30", "abends (Nachtscheibe von heute läuft)"]]) {
+    await mock({ ...reset, now: at(h), booked: [future] });
+    const r = await fetch(`${APP}/api/availability?from=${cur}&to=${mon(berlinToday, k++)}`); const j = await r.json();
+    check(`Laufender Monat ${label}: 200, belegter Tag erkannt, keine vergangenen Tage`, r.status === 200 && j.bookedDates.includes(future) && j.bookedDates.every((d) => d > berlinToday), r.status + JSON.stringify(j));
+    b = body({ startDate: plus(berlinToday, 1), endDate: plus(berlinToday, 1), email: `morgen.${h.replace(":", "")}.${RUN}@example.org` }); const rs = await submit(b);
+    check(`Anfrage für morgen ${label}: gespeichert`, rs.status === 200, JSON.stringify(rs));
+  }
+  await mock({ ...reset, now: at("12:15"), dropDay: plus(berlinToday, -1) });
+  r = await fetch(`${APP}/api/availability?from=${cur}&to=${mon(berlinToday, k++)}`);
+  check("Fehlender vergangener Tag blockiert den Monat nicht: 200", r.status === 200, String(r.status));
+  await mock({ ...reset, now: at("12:15"), dropDay: plus(berlinToday, 5) });
+  r = await fetch(`${APP}/api/availability?from=${cur}&to=${mon(berlinToday, k++)}`);
+  check("Fehlender zukünftiger Tag: 503 (nie frei)", r.status === 503, String(r.status));
+  await mock({ ...reset, now: at("17:30"), nightBlocked: [berlinToday] });
+  b = body({ startDate: plus(berlinToday, 1), endDate: plus(berlinToday, 1), startTime: "08:00", email: `nacht.${RUN}@example.org` }); r = await submit(b);
+  check("Laufende Nachtscheibe von heute belegt → morgen 409", r.status === 409 && r.json.conflictDates?.[0] === plus(berlinToday, 1), JSON.stringify(r));
+  await mock({ ...reset, now: at("12:15"), nightBlocked: [lastOfCur] });
+  r = await fetch(`${APP}/api/availability?from=${cur}&to=${mon(berlinToday, k++)}`); j = await r.json();
+  check(`Monatswechsel: Nachtsperre ${lastOfCur} → ${nxt}-01 belegt`, r.status === 200 && j.bookedDates.includes(lastOfCur) && j.bookedDates.includes(nxt + "-01"), JSON.stringify(j));
+  r = await fetch(`${APP}/api/availability?from=${nxt}&to=${nxt}`); j = await r.json();
+  check(`Monatswechsel nur ${nxt}: Nachtscheibe vom Vormonat einbezogen → ${nxt}-01 belegt`, r.status === 200 && j.bookedDates[0] === nxt + "-01", JSON.stringify(j));
+}
 // 7 API-Ausfall
 for (const mode of ["500", "204", "garbage", "tokenfail", "timeout"]) {
   await mock({ ...reset, apaleo: mode }); b = body({ startDate: "2027-02-22", endDate: "2027-02-22" }); r = await submit(b);

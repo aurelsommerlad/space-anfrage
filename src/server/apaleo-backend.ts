@@ -155,8 +155,11 @@ async function fetchTemplate(cfg: Cfg, template: "DayUse" | "OverNight", from: I
     const f = typeof ts.from === "string" ? Date.parse(ts.from) : NaN;
     const t = typeof ts.to === "string" ? Date.parse(ts.to) : NaN;
     if (!Number.isFinite(f) || !Number.isFinite(t) || t <= f) throw new ApaleoUnavailableError("Verfügbarkeit: ungültige Zeitscheibe");
-    // Kalendertag = lokales Datum am Beginn der Zeitscheibe (ISO mit Offset der Property)
-    const day = (ts.from as string).slice(0, 10);
+    // Nominaler Kalendertag der Zeitscheibe, abgeleitet aus dem ENDE (lokales Datum mit Offset der Property):
+    // apaleo kürzt eine gerade laufende Scheibe am Beginn auf "jetzt" (z. B. DayUse 12:15–16:00),
+    // das Ende bleibt unverändert. DayUse endet am selben Tag, OverNight am Folgetag.
+    const end = (ts.to as string).slice(0, 10);
+    const day = template === "DayUse" ? end : addDays(end, -1);
     const ug = ts.unitGroups?.find((u) => u.unitGroup?.id === cfg.unitGroupId);
     if (!ug) throw new ApaleoUnavailableError("Verfügbarkeit: Kategorie fehlt in der Antwort");
     result.set(day, { from: f, to: t, free: sliceIsFree(ug) });

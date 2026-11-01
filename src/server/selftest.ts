@@ -92,14 +92,24 @@ async function checkDatabase(cfg: LiveConfig, applySchema: boolean, pub: boolean
     group: g,
     label: "Ziel",
     status: provider === "Supabase" ? "warn" : "info",
-    detail: `${provider}${dbRegion(host) ? ` (${dbRegion(host)})` : ""}, ${pub ? "" : `Host ${maskHost(host)}, `}Fingerabdruck ${dbFingerprint(cfg.databaseUrl)}${provider === "Supabase" ? " – bitte sicherstellen, dass dies das eigene SPACE-Projekt ist" : ""}`,
+    detail: `${provider}${dbRegion(host) ? ` (${dbRegion(host)})` : ""}${/^db\.[a-z0-9]+\.supabase\.co$/.test(host) ? ", Direktverbindung" : /pooler\.supabase\.com$/.test(host) ? ", Pooler" : ""}, ${pub ? "" : `Host ${maskHost(host)}, `}Fingerabdruck ${dbFingerprint(cfg.databaseUrl)}${provider === "Supabase" ? " – bitte sicherstellen, dass dies das eigene SPACE-Projekt ist" : ""}`,
   });
   const sql = getSql(cfg.databaseUrl);
   try {
     const [v] = await withTimeout(sql<{ v: string }[]>`select current_setting('server_version') as v`, 10_000);
     out.push({ group: g, label: "Verbindung", status: "ok", detail: `Postgres ${v?.v ?? "?"}` });
   } catch (e) {
-    out.push({ group: g, label: "Verbindung", status: "fail", detail: dbError(e) });
+    const code = (e as { code?: string }).code;
+    const supabaseDirect = /^db\.[a-z0-9]+\.supabase\.co$/.test(host);
+    out.push({
+      group: g,
+      label: "Verbindung",
+      status: "fail",
+      detail:
+        supabaseDirect && (code === "ENOTFOUND" || code === "ETIMEDOUT" || code === "EAI_AGAIN")
+          ? "Host nicht erreichbar: Supabase-Direktverbindung (db.….supabase.co) ist nur per IPv6 erreichbar, Vercel unterstützt kein IPv6 – DATABASE_URL durch die Pooler-Verbindung ersetzen (Supabase → Connect → Transaction pooler, Port 6543)"
+          : dbError(e),
+    });
     return out;
   }
   try {
@@ -258,8 +268,9 @@ async function checkMail(cfg: LiveConfig): Promise<Check[]> {
   } catch {
     mx = [];
   }
-  const spfOk = !!spf?.some((r) => /include:amazonses\.com/.test(r));
-  const mxOk = mx.some((m) => /amazonses\.com$/.test(m));
+  // Return-Path-Subdomain: SPF-Eintrag und MX müssen vorhanden sein (Ziel je nach Resend-Infrastruktur verschieden)
+  const spfOk = !!spf?.some((r) => /^v=spf1\s/i.test(r));
+  const mxOk = mx.length > 0;
   out.push({ group: g, label: "SPF / Return-Path (send.)", status: spfOk && mxOk ? "ok" : "fail", detail: `SPF ${spfOk ? "vorhanden" : "fehlt"}, MX ${mxOk ? "vorhanden" : "fehlt"}` });
   const dmarc = (await txt(`_dmarc.${domain}`)) ?? (await txt(`_dmarc.${domain.split(".").slice(-2).join(".")}`));
   out.push({ group: g, label: "DMARC", status: dmarc?.some((r) => /^v=DMARC1/i.test(r)) ? "ok" : "warn", detail: dmarc?.length ? "Eintrag vorhanden" : "kein Eintrag (empfohlen)" });

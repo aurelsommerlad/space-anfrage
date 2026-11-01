@@ -888,16 +888,41 @@
   color: var(--muted);
 }
 .selectionRow {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
-  justify-content: space-between;
   gap: 4px 16px;
   margin-top: 6px;
+  container-type: inline-size;
 }
 .selection {
   font-size: var(--label-size);
   font-weight: var(--label-weight);
+  line-height: var(--text-line);
+}
+/* Link im Textfluss der Zeile: keine zusätzliche Höhe, Platz immer reserviert */
+.selectionRow .linkButton {
+  padding: 0;
+  line-height: var(--text-line);
+  white-space: nowrap;
+}
+.selectionRow .linkButton[data-hidden] {
+  visibility: hidden;
+}
+@media (max-width: 479px) {
+  .selectionRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .selectionRow .linkButton {
+    justify-self: start;
+  }
+}
+/* Mehrere Tage: Der Hinweis nach dem ersten Klick bricht bei schmaler Zeile um –
+   zwei Zeilen reservieren, damit nichts springt. */
+@container (max-width: 700px) {
+  .selectionRow[data-multi] .selection {
+    min-height: calc(2em * var(--text-line));
+  }
 }
 
 /* ------------------------------------------------------------------ */

@@ -94,19 +94,23 @@ export function StepDate(p: Props) {
           describedBy={["cal-hint", "cal-selection", dateError ? "f-startDate-error" : null].filter(Boolean).join(" ")}
           invalid={!!dateError}
         />
-        <div className={styles.selectionRow}>
+        {/* Feste Höhe: Der Link ist immer im Layout (ohne Auswahl unsichtbar), damit
+            das Formular beim Wählen eines Tages nicht springt. */}
+        <div className={styles.selectionRow} data-multi={draft.multiDay || undefined}>
           <p id="cal-selection" className={styles.selection} aria-live="polite">
             {selection}
           </p>
-          {draft.startDate ? (
-            <button
-              type="button"
-              className={styles.linkButton}
-              onClick={() => update({ startDate: null, endDate: null })}
-            >
-              Auswahl zurücksetzen
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className={styles.linkButton}
+            data-hidden={!draft.startDate || undefined}
+            aria-hidden={!draft.startDate || undefined}
+            tabIndex={draft.startDate ? undefined : -1}
+            disabled={!draft.startDate}
+            onClick={() => update({ startDate: null, endDate: null })}
+          >
+            Auswahl zurücksetzen
+          </button>
         </div>
         {p.notice ? (
           <p className={styles.notice} role="status">
